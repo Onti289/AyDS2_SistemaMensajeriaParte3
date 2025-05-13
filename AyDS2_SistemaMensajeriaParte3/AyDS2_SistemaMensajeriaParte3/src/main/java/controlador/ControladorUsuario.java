@@ -137,17 +137,8 @@ public class ControladorUsuario implements ActionListener, Observer {
 
 			if (this.ventana instanceof VentanaLoginORegistrar) {
 				VentanaLoginORegistrar ventanaRegistrarse = (VentanaLoginORegistrar) this.ventana;
-				puerto = Integer.parseInt(ventanaRegistrarse.getPuerto());
-				if (!this.sistemaUsuario.puertoDisponible(puerto)) {
-					((VentanaLoginORegistrar) this.ventana).muestraErrorPuertoEnUso();
-					((VentanaLoginORegistrar) this.ventana).vaciarTextFieldPuerto();
-					((VentanaLoginORegistrar) this.ventana).deshabilitarBoton();
-				} else {
-		
-					this.sistemaUsuario.iniciarServidor(puerto);
-					setUser(ventanaRegistrarse.getUsuario(), puerto, ventanaRegistrarse.getIP(), Util.CTEREGISTRAR);
-				
-				}
+				//this.sistemaUsuario.iniciarServidor();
+				//setUser(ventanaRegistrarse.getUsuario(), puerto, ventanaRegistrarse.getIP(), Util.CTEREGISTRAR);
 			}
 
 			break;
@@ -156,17 +147,9 @@ public class ControladorUsuario implements ActionListener, Observer {
 
 			if (this.ventana instanceof VentanaLoginORegistrar) {
 				VentanaLoginORegistrar ventanaLogin = (VentanaLoginORegistrar) this.ventana;
-				puerto = Integer.parseInt(ventanaLogin.getPuerto());
-				if (!this.sistemaUsuario.puertoDisponible(puerto)) {
-					((VentanaLoginORegistrar) this.ventana).muestraErrorPuertoEnUso();
-					((VentanaLoginORegistrar) this.ventana).vaciarTextFieldPuerto();
-					((VentanaLoginORegistrar) this.ventana).deshabilitarBoton();
-				} else {
-		
-					this.sistemaUsuario.iniciarServidor(puerto);
-					setUser(ventanaLogin.getUsuario(), puerto, ventanaLogin.getIP(), Util.CTELOGIN);
+				//this.sistemaUsuario.iniciarServidor();
+				//setUser(ventanaLogin.getUsuario(), puerto, ventanaLogin.getIP(), Util.CTELOGIN);
 				
-				}
 			}
 
 			break;

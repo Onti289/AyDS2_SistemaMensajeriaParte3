@@ -2,6 +2,7 @@ package sistemaMensajeria;
 
 import modeloNegocio.SistemaServidor;
 import vistas.IVista;
+import vistas.VentanaMonitor;
 import vistas.VentanaServidor;
 
 public class MainServidor {
@@ -11,6 +12,7 @@ public class MainServidor {
         SistemaServidor servidor = SistemaServidor.get_Instancia();
         servidor.iniciaServidor();
         VentanaServidor ventanaServidor= new VentanaServidor();
+        VentanaMonitor ventanaMonitor = new VentanaMonitor();
     }
 
 }
