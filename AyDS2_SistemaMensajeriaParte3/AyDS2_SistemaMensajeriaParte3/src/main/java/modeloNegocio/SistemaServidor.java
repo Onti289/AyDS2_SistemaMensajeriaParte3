@@ -49,25 +49,21 @@ public class SistemaServidor {
 		}
 	}
 
-	public void iniciaServidor() {
+	public void iniciaServidor(int puerto) {
 		Thread serverThread = new Thread(() -> {
-			try (ServerSocket serverSocket = new ServerSocket(Util.PUERTO_SERVIDOR)) {
+			try (ServerSocket serverSocket = new ServerSocket(puerto)) {
 				while (true) {
 					
 					Socket clienteSocket = serverSocket.accept();
-					System.out.println("Cliente conectado desde " + clienteSocket.getInetAddress());
 
 					try (ObjectInputStream ois = new ObjectInputStream(clienteSocket.getInputStream())) {
 						Object recibido = ois.readObject();
-						System.out.println("LLEga a servereee");
 						
 						if (recibido instanceof Solicitud) {
 							Solicitud solicitud = (Solicitud) recibido;
-							System.out.println("soli = " + solicitud.getTipoSolicitud());
 							if (solicitud.getTipoSolicitud().equalsIgnoreCase(Util.SOLICITA_LISTA_USUARIO)) {
 								retornaLista(solicitud.getIp(), solicitud.getPuerto());
 							} else if (solicitud.getTipoSolicitud().equalsIgnoreCase(Util.CTEREGISTRAR)) {
-								System.out.println("Registrooooooo");
 								UsuarioDTO usuario = solicitud.getUsuarioDTO();
 								if (registrarUsuario(usuario)) {
 									solicitud.setTipoSolicitud(Util.CTEREGISTRO);
@@ -118,12 +114,17 @@ public class SistemaServidor {
 				}
 			} catch (Exception e) {
 				System.err.println("Error en el servidor central: " + e.getMessage());
-				// cerrarServidor();
 			}
 		});
 		serverThread.start();
 	}
-
+	public boolean puertoDisponible(int puerto) {
+		try (ServerSocket socket = new ServerSocket(puerto)) {
+			return true; // El puerto esta  disponible
+		} catch (IOException e) {
+			return false; // El puerto ya esta  en uso
+		}
+	}
 	private List<MensajeDTO> entregarMensajesPendientes(String nombre,String ip,int puerto) {
 		int i=0;
 		Mensaje m;
@@ -272,4 +273,22 @@ public class SistemaServidor {
 		return tipo;
 	}
 
-}
+	public void registraServidor(String ip, int puerto) {
+			//obtener ip y puerto de monitor desde archivo
+			try (Socket socket = new Socket(Util.IPLOCAL, Util.PUERTO_MONITOR)) { 
+			    ObjectOutputStream oos = null;
+			    oos = new ObjectOutputStream(socket.getOutputStream());
+			    ServidorDTO servidor = new ServidorDTO(puerto,ip);
+			    oos.writeObject(servidor);
+			    oos.flush();
+			    oos.close();  	
+			    System.out.println(" Inicia el servidor OOOOVACSCS");
+			    this.iniciaServidor(puerto);
+			}
+			catch (IOException e) {
+				System.out.println("error");
+			}
+		}
+		
+	}
+

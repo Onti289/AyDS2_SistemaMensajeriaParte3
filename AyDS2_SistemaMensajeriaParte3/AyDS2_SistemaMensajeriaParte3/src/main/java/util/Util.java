@@ -1,5 +1,7 @@
 package util;
 
+import java.net.SocketImpl;
+
 import javax.swing.Icon;
 
 public class Util {
@@ -14,7 +16,6 @@ public class Util {
     public static final String CTEIPINVALIDO = "Ip invalido";
     public static final String CTEPUERTOENUSO = "Puerto en uso";
     public static final String CTEPUERTOINVALIDO = "Puerto invalido";
-    public static final int PUERTO_SERVIDOR = 1024;
     public static final String SOLICITA_LISTA_USUARIO = "Solicitud de lista de usuarios";
     public static final String CTEINICIARSESION = "Iniciar sesion";
     public static final String CTELOGIN = "Log in";
@@ -25,5 +26,10 @@ public class Util {
     public static final String CTEINICIOSESION = "Inicio sesion";
     public static final String CTEDESCONEXION = "Usuario se desconecta";
     public static final String CTESOLICITARMENSAJES = "Usuario solicita el historial de mensajes pendientes";
+	public static final int PUERTO_MONITOR =1024;
+	public static final String CTE_EN_LINEA = "En linea";
+	public static final String CTESERVERDESCONECTADO = "Desconectado";
+	public static final String CTE_ACTIVO = "Activo";
+	public static final String CTE_REDUNDANTE = "Redundante";
 
 }

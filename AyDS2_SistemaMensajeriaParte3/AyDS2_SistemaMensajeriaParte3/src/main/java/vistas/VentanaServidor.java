@@ -7,10 +7,10 @@ import modeloNegocio.SistemaServidor;
 import java.awt.*;
 import java.awt.event.ActionListener;
 
-public class VentanaServidor extends JFrame {
+public class VentanaServidor extends JFrame implements IVista {
 
     private JLabel etiquetaEstado;
-    public VentanaServidor() {
+    public VentanaServidor(int puerto,String ip) {
         setTitle("Servidor");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); // No cerrar directamente
         setSize(300, 200);
@@ -20,7 +20,7 @@ public class VentanaServidor extends JFrame {
         panelPrincipal.setLayout(new GridBagLayout());
         getContentPane().add(panelPrincipal);
 
-        etiquetaEstado = new JLabel("Servidor en funcionamiento");
+        etiquetaEstado = new JLabel("Servidor con ip "+ip+" funcionando en puerto "+puerto);
         etiquetaEstado.setFont(new Font("Arial", Font.PLAIN, 14));
         panelPrincipal.add(etiquetaEstado);
 
@@ -37,4 +37,10 @@ public class VentanaServidor extends JFrame {
     public void dispose() {
         super.dispose();
     }
+
+	@Override
+	public void setActionListener(ActionListener controlador) {
+		// TODO Auto-generated method stub
+		
+	}
 }

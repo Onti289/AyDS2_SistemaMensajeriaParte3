@@ -1,5 +1,7 @@
 package sistemaMensajeria;
 
+
+import controlador.ControladorServer;
 import modeloNegocio.SistemaServidor;
 import vistas.IVista;
 import vistas.VentanaMonitor;
@@ -10,9 +12,8 @@ public class MainServidor {
     public static void main(String[] args) {
         // TODO Auto-generated method stub
         SistemaServidor servidor = SistemaServidor.get_Instancia();
-        servidor.iniciaServidor();
-        VentanaServidor ventanaServidor= new VentanaServidor();
-        VentanaMonitor ventanaMonitor = new VentanaMonitor();
+
+        ControladorServer controlador=new ControladorServer(servidor);   
     }
 
 }

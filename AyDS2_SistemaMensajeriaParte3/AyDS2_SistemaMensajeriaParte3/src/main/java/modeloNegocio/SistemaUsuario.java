@@ -184,7 +184,7 @@ public class SistemaUsuario extends Observable {
 				return u;
 			}
 		}
-		return null; // o lanzar excepci n si quer s asegurarte que est 
+		return null; // o lanzar excepcion si queres asegurarte que este 
 	}
 
 	public Usuario getUsuario() {
