@@ -18,9 +18,11 @@ public class SistemaUsuario extends Observable {
 	private static SistemaUsuario sistema_instancia = null;
 	private ServerSocket serverSocket;
 	private volatile boolean servidorActivo;
+	private int puerto_servidor;
 	private SistemaUsuario() {
 
 	}
+	
 
 	public static SistemaUsuario get_Instancia() {
 		if (sistema_instancia == null)
@@ -190,7 +192,20 @@ public class SistemaUsuario extends Observable {
 	public Usuario getUsuario() {
 		return this.usuario;
 	}
-
+	public void obtienePuertoServer() {
+		try (Socket socket = new Socket(Util.IPLOCAL, Util.PUERTO_MONITOR)) { 
+		    ObjectOutputStream oos = null;
+		    oos = new ObjectOutputStream(socket.getOutputStream());
+		    Solicitud soli = new Solicitud (new UsuarioDTO(nickName, puerto, ip), tipo);
+		    oos.writeObject(soli);
+		    oos.flush();
+		    oos.close();
+		    	
+		}
+		catch (IOException e) {
+			System.out.println("error");
+		}
+	}
 	public void enviarMensajeServidor(UsuarioDTO contacto, String mensaje) {
 		try (Socket socket = new Socket(Util.IPLOCAL, Util.PUERTO_SERVIDOR)) {
 			ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
@@ -213,8 +228,9 @@ public class SistemaUsuario extends Observable {
 			notifyObservers(error);
 		}
 	}
-
+	
 	public void enviaSolicitudAServidor(String nickName, int puerto, String ip, String tipo) {
+		
 		try (Socket socket = new Socket(Util.IPLOCAL, Util.PUERTO_SERVIDOR)) { 
 		    ObjectOutputStream oos = null;
 		    oos = new ObjectOutputStream(socket.getOutputStream());
@@ -238,7 +254,14 @@ public class SistemaUsuario extends Observable {
 	        }
 	    }
 	}
-	public static boolean puertoDisponible(int puerto) {
+	public int buscaPuerto() {
+		int puerto=1027;
+		while(!this.puertoDisponible(puerto)) {
+			puerto++;
+		}
+		return puerto;
+	}
+	public boolean puertoDisponible(int puerto) {
 		try (ServerSocket socket = new ServerSocket(puerto)) {
 			socket.setReuseAddress(true);
 			return true; // El puerto est  disponible
@@ -252,7 +275,6 @@ public class SistemaUsuario extends Observable {
 	}
 
 	public String getAlias(int puerto) {
-		String name;
 		PriorityQueue<Usuario> lista = this.usuario.getAgenda();
 		while (!lista.isEmpty()) {
 			Usuario contacto = lista.poll();

@@ -115,7 +115,6 @@ public class ControladorUsuario implements ActionListener, Observer {
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		// TODO Auto-generated method stub
-		int puerto;
 		switch (e.getActionCommand()) {
 		
 		//llega aca cuado apreta boton registro en VentanaInicial
@@ -137,8 +136,11 @@ public class ControladorUsuario implements ActionListener, Observer {
 
 			if (this.ventana instanceof VentanaLoginORegistrar) {
 				VentanaLoginORegistrar ventanaRegistrarse = (VentanaLoginORegistrar) this.ventana;
-				//this.sistemaUsuario.iniciarServidor();
-				//setUser(ventanaRegistrarse.getUsuario(), puerto, ventanaRegistrarse.getIP(), Util.CTEREGISTRAR);
+				int puertoBuscado=this.sistemaUsuario.buscaPuerto();
+				this.sistemaUsuario.iniciarServidor(puertoBuscado);
+				//ip no deberia ser local deberia obtenerse de alguna manera
+				// o tal vez siempre es local? ya que el sistema usuario lo corre en su maquina
+				setUser(ventanaRegistrarse.getUsuario(), puertoBuscado, Util.IPLOCAL, Util.CTEREGISTRAR);
 			}
 
 			break;
@@ -147,8 +149,11 @@ public class ControladorUsuario implements ActionListener, Observer {
 
 			if (this.ventana instanceof VentanaLoginORegistrar) {
 				VentanaLoginORegistrar ventanaLogin = (VentanaLoginORegistrar) this.ventana;
-				//this.sistemaUsuario.iniciarServidor();
-				//setUser(ventanaLogin.getUsuario(), puerto, ventanaLogin.getIP(), Util.CTELOGIN);
+				int puertoBuscado=this.sistemaUsuario.buscaPuerto();
+				this.sistemaUsuario.iniciarServidor(puertoBuscado);
+				//ip no deberia ser local deberia obtenerse de alguna manera
+				// o tal vez siempre es local? ya que el sistema usuario lo corre en su maquina
+				setUser(ventanaLogin.getUsuario(), puertoBuscado,Util.IPLOCAL, Util.CTELOGIN);
 				
 			}
 

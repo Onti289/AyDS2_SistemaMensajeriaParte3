@@ -13,10 +13,7 @@ import util.Util;
 public class SistemaMonitor extends Observable{
 	ArrayList<Servidor> listaServidores=new ArrayList<Servidor>();
 	private static SistemaMonitor monitor_instancia = null;
-	/*redundancia pasiva
-	heartbeat
-	monitor
-	resincronizacion de estados*/
+
 	public SistemaMonitor() {
 		
 	}
@@ -120,6 +117,6 @@ public class SistemaMonitor extends Observable{
 		}
 		return i;
 	}
-
+	
 	
 }
