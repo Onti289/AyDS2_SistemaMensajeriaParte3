@@ -30,15 +30,22 @@ public class SistemaMonitor extends Observable{
 	//este metodo no lo saca del arreglo solo cambia el estado a fuera de linea
 	public void eliminaServidor(int puerto,String ip) {
 		int i=0;
-		while(i<this.listaServidores.size() && this.listaServidores.get(i).getPuerto()!=puerto && this.listaServidores.get(i).getIp().equalsIgnoreCase(ip)) {
+		// ip llega como parametro pero no se trabaja por que es todo local, lo dejamos por que es escalable y si
+		//en un futuro se trabaja con ip distintas se analizara
+		while(i<this.listaServidores.size() && this.listaServidores.get(i).getPuerto()!=puerto) {
 			i++;
 		}
 		if(i<this.listaServidores.size()) {
-			this.cambiaEstadoTipoServidor(i, false, false);//siempre setea false en Esprincipal sea o no principal
+			this.listaServidores.get(i).setEnLinea(false);
+			if((this.listaServidores.get(i).isPrincipal() )) {
+				int pos=buscaPrimerServidorRedundante();
+				if(pos<this.listaServidores.size()){
+					this.listaServidores.get(pos).setPrincipal(true);
+				}
+			}
+			this.listaServidores.get(i).setPrincipal(false);
 		}
-		if(buscaPrimerServidorRedundante()<this.listaServidores.size()) {
-			this.cambiaEstadoTipoServidor(i, true, true);
-		}
+		
 	}
 	private int buscaPrimerServidorRedundante() {
 		int i=0;
@@ -57,10 +64,7 @@ public class SistemaMonitor extends Observable{
 		else
 			return false;
 	}
-	public void cambiaEstadoTipoServidor(int pos,boolean Enlinea,boolean Esprincipal) {
-		this.listaServidores.get(pos).setEnLinea(Enlinea);
-		this.listaServidores.get(pos).setPrincipal(Esprincipal);
-	}
+
 	public void inicia() {
 		Thread serverThread = new Thread(() -> {
 			try (ServerSocket serverSocket = new ServerSocket(Util.PUERTO_MONITOR)) {
@@ -86,7 +90,6 @@ public class SistemaMonitor extends Observable{
 											this.listaServidores.get(pos).setPrincipal(true);
 										}
 										this.listaServidores.get(pos).setEnLinea(true);
-										
 									}
 									else {
 										this.listaServidores.get(pos).setPulso(true);
@@ -119,21 +122,23 @@ public class SistemaMonitor extends Observable{
 		serverThread.start();
 	}
 	private void controlaPulsos() {
+		//posible mejora que chequee 2 pulsos
 		Thread thread = new Thread(() -> {
 			while (true) {
 				synchronized (listaServidores) {  // Sincronizar acceso concurrente
 					Iterator<ServidorDTO> it = listaServidores.iterator();
 					while (it.hasNext()) {
 						ServidorDTO s = it.next();
-						if (!s.isPulso()) {
-							int puerto = s.getPuerto();
-							String ip = s.getIp();
-							eliminaServidor(puerto, ip);
-							ServidorDTO servidor = new ServidorDTO(puerto, ip);
-							setChanged();
-							notifyObservers(servidor);
-						} else {
-							s.setPulso(false); // Resetear para próximo ciclo
+						if(s.isEnLinea()) {
+							if ( !s.isPulso()) {
+								int puerto = s.getPuerto();
+								String ip = s.getIp();
+								eliminaServidor(puerto, ip);
+								setChanged();
+								notifyObservers(s);
+							} else {
+								s.setPulso(false); // Resetear para próximo ciclo
+							}
 						}
 					}
 				}

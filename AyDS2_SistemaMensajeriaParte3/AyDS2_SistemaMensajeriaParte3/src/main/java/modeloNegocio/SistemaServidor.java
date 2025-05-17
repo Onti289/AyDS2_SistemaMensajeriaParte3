@@ -22,6 +22,9 @@ public class SistemaServidor {
 	private ArrayList<Mensaje> mensajesPendientes=new ArrayList<Mensaje>();
 	private String ip;
 	private int puerto;
+	private Thread heartbeatThread;
+	private volatile boolean heartbeatActivo = true;
+
 	private SistemaServidor() {
 
 	}
@@ -113,6 +116,7 @@ public class SistemaServidor {
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
+					detenerHeartbeat();
 					clienteSocket.close();
 				}
 			} catch (Exception e) {
@@ -296,8 +300,8 @@ public class SistemaServidor {
 		}
 
 	private void Heartbeat() {
-		Thread heartbeatThread = new Thread(() -> {
-			while (true) {
+		heartbeatThread = new Thread(() -> {
+			while (heartbeatActivo) {
 				try (Socket socket = new Socket(Util.IPLOCAL, Util.PUERTO_MONITOR)) { 
 					ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
 					ServidorDTO servidor = new ServidorDTO(this.puerto, this.ip);
@@ -307,7 +311,6 @@ public class SistemaServidor {
 					System.err.println("Error en Heartbeat: " + e.getMessage());
 				}
 
-				// Esperar 2 segundos antes de enviar el próximo heartbeat
 				try {
 					Thread.sleep(2000);
 				} catch (InterruptedException e) {
@@ -318,6 +321,13 @@ public class SistemaServidor {
 		});
 		heartbeatThread.start();
 	}
+	public void detenerHeartbeat() {
+		heartbeatActivo = false;
+		if (heartbeatThread != null && heartbeatThread.isAlive()) {
+			heartbeatThread.interrupt(); // Si está durmiendo
+		}
+	}
+
 
 		
 	}
