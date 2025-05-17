@@ -7,6 +7,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.time.LocalDateTime;
 
 import dto.*;
@@ -19,6 +20,8 @@ public class SistemaServidor {
 	private ArrayList<Usuario> listaConectados = new ArrayList<Usuario>();
 	private static SistemaServidor servidor_instancia = null;
 	private ArrayList<Mensaje> mensajesPendientes=new ArrayList<Mensaje>();
+	private String ip;
+	private int puerto;
 	private SistemaServidor() {
 
 	}
@@ -278,17 +281,44 @@ public class SistemaServidor {
 			try (Socket socket = new Socket(Util.IPLOCAL, Util.PUERTO_MONITOR)) { 
 			    ObjectOutputStream oos = null;
 			    oos = new ObjectOutputStream(socket.getOutputStream());
+			    this.ip=ip;
+			    this.puerto=puerto;
 			    ServidorDTO servidor = new ServidorDTO(puerto,ip);
 			    oos.writeObject(servidor);
 			    oos.flush();
 			    oos.close();  	
-			    System.out.println(" Inicia el servidor OOOOVACSCS");
 			    this.iniciaServidor(puerto);
+			    Heartbeat();
 			}
 			catch (IOException e) {
 				System.out.println("error");
 			}
 		}
+
+	private void Heartbeat() {
+		Thread heartbeatThread = new Thread(() -> {
+			while (true) {
+				try (Socket socket = new Socket(Util.IPLOCAL, Util.PUERTO_MONITOR)) { 
+					ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+					ServidorDTO servidor = new ServidorDTO(this.puerto, this.ip);
+					oos.writeObject(servidor);
+					oos.flush();
+				} catch (IOException e) {
+					System.err.println("Error en Heartbeat: " + e.getMessage());
+				}
+
+				// Esperar 2 segundos antes de enviar el próximo heartbeat
+				try {
+					Thread.sleep(2000);
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+					break;
+				}
+			}
+		});
+		heartbeatThread.start();
+	}
+
 		
 	}
 

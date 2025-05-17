@@ -4,6 +4,7 @@ import java.io.ObjectInputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Observable;
 
 import dto.ServidorDTO;
@@ -11,7 +12,7 @@ import dto.UsuarioDTO;
 import util.Util;
 
 public class SistemaMonitor extends Observable{
-	ArrayList<Servidor> listaServidores=new ArrayList<Servidor>();
+	ArrayList<ServidorDTO> listaServidores=new ArrayList<ServidorDTO>();
 	private static SistemaMonitor monitor_instancia = null;
 
 	public SistemaMonitor() {
@@ -22,14 +23,14 @@ public class SistemaMonitor extends Observable{
 			monitor_instancia = new SistemaMonitor();
 		return monitor_instancia;
 	}
-	public void agregaServidor(Servidor servidor) {
+	public void agregaServidor(ServidorDTO servidor) {
 		this.listaServidores.add(servidor); 
 	}//primer parametro siempre es true ya que si sea agrega servidor es por que esta en linea
 	
 	//este metodo no lo saca del arreglo solo cambia el estado a fuera de linea
 	public void eliminaServidor(int puerto,String ip) {
 		int i=0;
-		while(i<this.listaServidores.size() && this.listaServidores.get(i).puerto!=puerto && this.listaServidores.get(i).ip.equalsIgnoreCase(ip)) {
+		while(i<this.listaServidores.size() && this.listaServidores.get(i).getPuerto()!=puerto && this.listaServidores.get(i).getIp().equalsIgnoreCase(ip)) {
 			i++;
 		}
 		if(i<this.listaServidores.size()) {
@@ -63,18 +64,20 @@ public class SistemaMonitor extends Observable{
 	public void inicia() {
 		Thread serverThread = new Thread(() -> {
 			try (ServerSocket serverSocket = new ServerSocket(Util.PUERTO_MONITOR)) {
+				controlaPulsos();
 				while (true) {
 					Socket servidorSocket = serverSocket.accept();
 					try (ObjectInputStream ois = new ObjectInputStream(servidorSocket.getInputStream())) {
 						Object recibido = ois.readObject();
 						if(recibido instanceof ServidorDTO)	{
 							ServidorDTO servidorDTO = (ServidorDTO) recibido;
-							Servidor servidor;
 							int pos=this.posServidor(servidorDTO);
 							
-							if(pos==0){//si esta vacio es el primer servidor
-								servidor=new Servidor(true,true,servidorDTO.getPuerto(),servidorDTO.getIp(),1);
-								this.agregaServidor(servidor);
+							if(pos==-1){//si esta vacio es el primer servidor
+								servidorDTO.setEnLinea(true);
+								servidorDTO.setPrincipal(true);
+								servidorDTO.setNro(1);
+								this.agregaServidor(servidorDTO);
 							}
 							else {
 								if(pos<this.listaServidores.size()) { //servidor que llega se agrego al menos una vez
@@ -85,17 +88,23 @@ public class SistemaMonitor extends Observable{
 										this.listaServidores.get(pos).setEnLinea(true);
 										
 									}
-									servidor=new Servidor(true,this.listaServidores.get(pos).principal,servidorDTO.getPuerto(),servidorDTO.getIp(),pos+1);					
+									else {
+										this.listaServidores.get(pos).setPulso(true);
+									}
+									servidorDTO.setEnLinea(true);
+									servidorDTO.setPrincipal(this.listaServidores.get(pos).isPrincipal());
+									servidorDTO.setNro(pos+1);
 								}
 								else { //si llega aca es un nuevo servidor 
-									System.out.println("Legooo");
-									servidor=new Servidor(true,false,servidorDTO.getPuerto(),servidorDTO.getIp(),this.listaServidores.size()+1);
-									this.agregaServidor(servidor);
+									servidorDTO.setEnLinea(true);
+									servidorDTO.setPrincipal(false);
+									servidorDTO.setNro(this.listaServidores.size()+1);
+									this.agregaServidor(servidorDTO);
 								}
 							}
 							
 							setChanged(); // importante
-							notifyObservers(servidor);
+							notifyObservers(servidorDTO);
 						}
 							
 					} catch (Exception e) {
@@ -109,11 +118,45 @@ public class SistemaMonitor extends Observable{
 		});
 		serverThread.start();
 	}
+	private void controlaPulsos() {
+		Thread thread = new Thread(() -> {
+			while (true) {
+				synchronized (listaServidores) {  // Sincronizar acceso concurrente
+					Iterator<ServidorDTO> it = listaServidores.iterator();
+					while (it.hasNext()) {
+						ServidorDTO s = it.next();
+						if (!s.isPulso()) {
+							int puerto = s.getPuerto();
+							String ip = s.getIp();
+							eliminaServidor(puerto, ip);
+							ServidorDTO servidor = new ServidorDTO(puerto, ip);
+							setChanged();
+							notifyObservers(servidor);
+						} else {
+							s.setPulso(false); // Resetear para próximo ciclo
+						}
+					}
+				}
+				try {
+					Thread.sleep(3000); // Verifica cada 3 segundos
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+					break;
+				}
+			}
+		});
+		thread.start();
+	}
 
 	private int posServidor(ServidorDTO servidorDTO) {
 		int i=0;
-		while(i<this.listaServidores.size() && (!this.listaServidores.get(i).getIp().equalsIgnoreCase(servidorDTO.getIp()) || this.listaServidores.get(i).getPuerto()!=servidorDTO.getPuerto())) {
-			i++;
+		if(this.listaServidores.isEmpty()) {
+			i=-1; //esta vacio
+		}
+		else {
+			while(i<this.listaServidores.size() && (!this.listaServidores.get(i).getIp().equalsIgnoreCase(servidorDTO.getIp()) || this.listaServidores.get(i).getPuerto()!=servidorDTO.getPuerto())) {
+				i++;
+			}
 		}
 		return i;
 	}

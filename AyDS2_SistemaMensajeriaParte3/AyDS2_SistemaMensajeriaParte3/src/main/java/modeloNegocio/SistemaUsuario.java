@@ -207,7 +207,7 @@ public class SistemaUsuario extends Observable {
 		}
 	}
 	public void enviarMensajeServidor(UsuarioDTO contacto, String mensaje) {
-		try (Socket socket = new Socket(Util.IPLOCAL, Util.PUERTO_SERVIDOR)) {
+		try (Socket socket = new Socket(Util.IPLOCAL, this.puerto_servidor)) {
 			ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
 			Usuario ureceptor = this.buscarUsuarioPorDTO(contacto);
 			Mensaje msg;
@@ -231,7 +231,7 @@ public class SistemaUsuario extends Observable {
 	
 	public void enviaSolicitudAServidor(String nickName, int puerto, String ip, String tipo) {
 		
-		try (Socket socket = new Socket(Util.IPLOCAL, Util.PUERTO_SERVIDOR)) { 
+		try (Socket socket = new Socket(Util.IPLOCAL,this.puerto_servidor)) { 
 		    ObjectOutputStream oos = null;
 		    oos = new ObjectOutputStream(socket.getOutputStream());
 		    Solicitud soli = new Solicitud (new UsuarioDTO(nickName, puerto, ip), tipo);

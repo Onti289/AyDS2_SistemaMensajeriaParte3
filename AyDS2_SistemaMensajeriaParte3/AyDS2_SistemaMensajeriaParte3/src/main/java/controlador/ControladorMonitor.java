@@ -5,8 +5,8 @@ import java.awt.event.ActionListener;
 import java.util.Observable;
 import java.util.Observer;
 
+import dto.ServidorDTO;
 import modeloNegocio.Mensaje;
-import modeloNegocio.Servidor;
 import modeloNegocio.SistemaMonitor;
 import util.Util;
 import vistas.VentanaMonitor;
@@ -25,14 +25,15 @@ public class ControladorMonitor implements Observer {
 	}
 	@Override
 	public void update(Observable o, Object arg) {
-		if (arg instanceof Servidor) {
-			Servidor servidor=(Servidor) arg;
+		if (arg instanceof ServidorDTO) {
+			ServidorDTO servidor=(ServidorDTO) arg;
 			LocalDateTime ahora = LocalDateTime.now();
 			DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 			if(servidor.isEnLinea()){
 				String fechaHora = ahora.format(formato);
 				ventana.setEstadoServidor(servidor.getNro(),Util.CTE_EN_LINEA);
 				String mensaje="Servidor "+servidor.getNro()+" ("+fechaHora+")";
+				ventana.setPuerto(servidor.getNro(),servidor.getPuerto());
 				ventana.agregarPulso(mensaje);
 			}
 			else {
