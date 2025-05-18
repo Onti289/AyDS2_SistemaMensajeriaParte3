@@ -139,11 +139,11 @@ public class SistemaMonitor extends Observable {
 								} else {
 									if (recibido instanceof Solicitud) {
 										Solicitud solicitud = (Solicitud) recibido;
-										if (solicitud.getTipoSolicitud() == Util.SOLICITA_PUERTO_SERVIDOR) {
+										if (solicitud.getTipoSolicitud().equalsIgnoreCase(Util.SOLICITA_PUERTO_SERVIDOR)) {
 											int puerto = buscaPuertoServidorPrincipal();
 											if (puerto == -1) { // no encontro un servidor activo
-												
-											} else { // encontro un servidor activo
+											
+											} else { // encontro un servidor activo	
 												oos.writeObject(puerto);
 												oos.flush();
 											}

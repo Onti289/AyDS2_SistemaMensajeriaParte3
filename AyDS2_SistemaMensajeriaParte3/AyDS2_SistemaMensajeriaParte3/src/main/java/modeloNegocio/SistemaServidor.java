@@ -1,6 +1,7 @@
 package modeloNegocio;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -21,14 +22,16 @@ public class SistemaServidor {
 	private ArrayList<Usuario> listaConectados = new ArrayList<Usuario>();
 	private static SistemaServidor servidor_instancia = null;
 	private ArrayList<Mensaje> mensajesPendientes=new ArrayList<Mensaje>();
+	private HashMap<String, ConexionUsuario> conexionesUsuarios = new HashMap<>();
 	private String ip;
 	private int puerto;
+	
 	private Thread heartbeatThread;
 	private volatile boolean heartbeatActivo = true;
 	private Socket socketMonitor;
 	private ObjectOutputStream oos;
 	private ObjectInputStream ois;
-
+	
 	private volatile boolean servidorActivo = true;
 	private ServerSocket serverSocket; // <-- lo haremos accesible
 	private Thread serverThread;
@@ -53,89 +56,111 @@ public class SistemaServidor {
 	}
 
 	private void enviaRespuestaUsuario(Solicitud usuario) {
-		try (Socket socket = new Socket(usuario.getIp(), usuario.getPuerto())) {
-			ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+		try {
 			oos.writeObject(usuario);
 			oos.flush();
-			oos.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 
 	public void iniciaServidor(int puerto) {
-		 serverThread = new Thread(() -> {
-			try {
-				serverSocket = new ServerSocket(puerto);
-				while (servidorActivo) {
-					
-					Socket clienteSocket = serverSocket.accept();
-					
-					try (ObjectInputStream ois = new ObjectInputStream(clienteSocket.getInputStream())) {
-						Object recibido = ois.readObject();
-						
-						if (recibido instanceof Solicitud) {
-							Solicitud solicitud = (Solicitud) recibido;
-							if (solicitud.getTipoSolicitud().equalsIgnoreCase(Util.SOLICITA_LISTA_USUARIO)) {
-								retornaLista(solicitud.getIp(), solicitud.getPuerto());
-							} else if (solicitud.getTipoSolicitud().equalsIgnoreCase(Util.CTEREGISTRAR)) {
-								UsuarioDTO usuario = solicitud.getUsuarioDTO();
-								if (registrarUsuario(usuario)) {
-									solicitud.setTipoSolicitud(Util.CTEREGISTRO);
-								} else {
-									solicitud.setTipoSolicitud(Util.CTEUSUARIOLOGUEADO);
-								}
-								enviaRespuestaUsuario(solicitud);
-							} else if (solicitud.getTipoSolicitud().equalsIgnoreCase(Util.CTELOGIN)) {
-				
-								UsuarioDTO usuario = solicitud.getUsuarioDTO();
-								int tipo = loginUsuario(usuario);
-								
-								if (tipo == 1) {
-									solicitud.setTipoSolicitud(Util.CTELOGIN);
-								} else {
-									// usuario Existe pero esta logueado
-									if (tipo == 2) {
-										solicitud.setTipoSolicitud(Util.CTEUSUARIOLOGUEADO);
-									} else {
-										solicitud.setTipoSolicitud(Util.CTEUSUERINEXISTENTE);
-									}
+	    servidorActivo = true;
 
-								}
-								enviaRespuestaUsuario(solicitud);
-							}
-							else {
-								if(solicitud.getTipoSolicitud().equalsIgnoreCase(Util.CTEDESCONEXION)) {
-									quitarUsuarioDesconectado(solicitud.getNombre());
-								}else {
-									if(solicitud.getTipoSolicitud().equalsIgnoreCase(Util.CTESOLICITARMENSAJES)) {
-										UsuarioDTO usuario=solicitud.getUsuarioDTO();
-										this.retornaListaMensajesPendientes(usuario.getIp(), usuario.getPuerto(),entregarMensajesPendientes(usuario.getNombre(),usuario.getIp(),usuario.getPuerto()));
-									}
-								}
-							}
-						}
-						else {
-							if(recibido instanceof Mensaje ) {
-								Mensaje mensaje = (Mensaje) recibido;
-								enviarMensaje(mensaje);
+	    serverThread = new Thread(() -> {
+	        try (ServerSocket serverSocket = new ServerSocket(puerto)) {
+	            while (servidorActivo) {
+	                Socket clienteSocket = serverSocket.accept();
+	                Thread clienteHandler = new Thread(() -> {
+	                    try {
+	                        oos = new ObjectOutputStream(clienteSocket.getOutputStream());
+	                        oos.flush(); // importante para evitar bloqueos
+	                        ois = new ObjectInputStream(clienteSocket.getInputStream());
+	                        
+	                        while (true) {
+	                            Object recibido = ois.readObject();
 
-							}
-						}
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-					clienteSocket.close();
-				}
-			} catch (Exception e) { //aca podriamos reintentar iniciar servidor
-				
-			}
-			finally {
+	                            if (recibido instanceof Solicitud) {
+	                                Solicitud solicitud = (Solicitud) recibido;
+
+	                                switch (solicitud.getTipoSolicitud()) {
+	                                    case Util.SOLICITA_LISTA_USUARIO:
+	                                        retornaLista(solicitud.getIp(), solicitud.getPuerto());
+	                                        break;
+
+	                                    case Util.CTEREGISTRAR:
+	                                        UsuarioDTO usuarioReg = solicitud.getUsuarioDTO();
+	                                        if (registrarUsuario(usuarioReg)) {
+	                                            solicitud.setTipoSolicitud(Util.CTEREGISTRO);
+	                                            String clave = usuarioReg.getNombre();
+	                                            ConexionUsuario conexion = new ConexionUsuario(usuarioReg, oos, ois, clienteSocket);
+	                                            conexionesUsuarios.put(clave, conexion);
+	                                        } else {
+	                                            solicitud.setTipoSolicitud(Util.CTEUSUARIOLOGUEADO);
+	                                        }
+	                                        enviaRespuestaUsuario(solicitud);
+	                                        break;
+
+	                                    case Util.CTELOGIN:
+	                                        UsuarioDTO usuarioLogin = solicitud.getUsuarioDTO();
+	                                        int tipo = loginUsuario(usuarioLogin);
+	                                        if (tipo == 1) {
+	                                            solicitud.setTipoSolicitud(Util.CTELOGIN);
+	                                            String clave = usuarioLogin.getNombre();
+	                                            ConexionUsuario conexion = new ConexionUsuario(usuarioLogin, oos, ois, clienteSocket);
+	                                            conexionesUsuarios.put(clave, conexion);
+	                                        } else if (tipo == 2) {
+	                                            solicitud.setTipoSolicitud(Util.CTEUSUARIOLOGUEADO);
+	                                        } else {
+	                                            solicitud.setTipoSolicitud(Util.CTEUSUERINEXISTENTE);
+	                                        }
+	                                        enviaRespuestaUsuario(solicitud);
+	                                        break;
+
+	                                    case Util.CTEDESCONEXION:
+	                                        quitarUsuarioDesconectado(solicitud.getNombre());
+	                                        break;
+
+	                                    case Util.CTESOLICITARMENSAJES:
+	                                        UsuarioDTO usuario = solicitud.getUsuarioDTO();
+	                                        retornaListaMensajesPendientes(
+	                                            usuario.getIp(),
+	                                            usuario.getPuerto(),
+	                                            entregarMensajesPendientes(usuario.getNombre(), usuario.getIp(), usuario.getPuerto())
+	                                        );
+	                                        break;
+
+	                                    default:
+	                                        System.out.println("Tipo de solicitud no reconocido: " + solicitud.getTipoSolicitud());
+	                                        break;
+	                                }
+	                            } else if (recibido instanceof Mensaje) {
+	                                Mensaje mensaje = (Mensaje) recibido;
+	                                enviarMensaje(mensaje);
+	                            }
+	                        }
+
+	                    } catch (Exception e) {
+	                        e.printStackTrace(); // o cerrar recursos si se desea
+	                    } finally {
+	                        try {
+	                            clienteSocket.close();
+	                        } catch (IOException e) {
+	                            e.printStackTrace();
+	                        }
+	                    }
+	                });
+	                clienteHandler.start();
+	            }
+	        } catch (IOException e) {
+	            System.err.println("Error al iniciar el servidor: " + e.getMessage());
+	        } finally {
 	            detenerHeartbeat();
 	        }
-		});
-		serverThread.start();
+	    });
+	    serverThread.start();
 	}
+
 	public boolean puertoDisponible(int puerto) {
 		try (ServerSocket socket = new ServerSocket(puerto)) {
 			return true; // El puerto esta  disponible
@@ -190,6 +215,7 @@ public class SistemaServidor {
 	        Usuario u = this.listaConectados.get(nro);
 	        if (u.getNickName().equalsIgnoreCase(nombre)) {
 	            this.listaConectados.remove(nro);
+	            conexionesUsuarios.remove(nombre);
 	            break; // Usuario encontrado y eliminado, salimos del bucle
 	        }
 	        nro++;

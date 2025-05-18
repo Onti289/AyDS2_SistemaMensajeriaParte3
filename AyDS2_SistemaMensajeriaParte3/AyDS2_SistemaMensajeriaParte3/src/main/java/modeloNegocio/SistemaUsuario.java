@@ -106,6 +106,7 @@ public class SistemaUsuario extends Observable {
 			oosMonitor.writeObject(soli);
 			oosMonitor.flush();
 			try {
+				System.out.println(soli.getTipoSolicitud());
 				this.puerto_servidor = (int) oisMonitor.readObject();	
 			} catch (ClassNotFoundException e) {
 				// TODO Auto-generated catch block
@@ -127,7 +128,9 @@ public class SistemaUsuario extends Observable {
 			Thread escuchaServidor = new Thread(() -> {
 				try {
 					while (true) {
+					
 						Object recibido = ois.readObject();
+						
 						if (recibido instanceof Mensaje) {
 							Mensaje mensaje = (Mensaje) recibido;
 							this.usuario.recibirMensaje(mensaje);
@@ -135,6 +138,7 @@ public class SistemaUsuario extends Observable {
 							notifyObservers(mensaje);
 
 						} else {// si llega aca es por que el server lo pudo registrar o loguear
+							
 							if (recibido instanceof Solicitud) {
 								Solicitud solicitud = (Solicitud) recibido;
 								// Si registra o loguea lo tiene que crear igual por que inicio de 0 el sistema
@@ -226,7 +230,7 @@ public class SistemaUsuario extends Observable {
 				msg = new Mensaje(mensaje, LocalDateTime.now(), this.usuario, ureceptor);
 				oos.writeObject(msg);
 				oos.flush();
-				oos.close();
+			//	oos.close();
 				this.usuario.guardarMensaje(msg);
 				setChanged(); // importante
 				notifyObservers(msg);
@@ -244,9 +248,10 @@ public class SistemaUsuario extends Observable {
 
 		try  {
 			Solicitud soli = new Solicitud(new UsuarioDTO(nickName), tipo);
+			System.out.println("HHH");
 			oos.writeObject(soli);
 			oos.flush();
-			oos.close();
+			//oos.close();
 
 		} catch (IOException e) {
 			System.out.println("error");

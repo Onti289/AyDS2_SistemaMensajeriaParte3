@@ -59,6 +59,7 @@ public class VentanaLoginORegistrar extends JFrame implements IVista, ActionList
 		panel_nickName.add(label_NickName);
 		
 		textFieldUsuario = new JTextField();
+		textFieldUsuario.addKeyListener(this);
 		textFieldUsuario.setBounds(90, 42, 80, 20);
 		panel_nickName.add(textFieldUsuario);
 		textFieldUsuario.setColumns(10);
@@ -127,7 +128,9 @@ public class VentanaLoginORegistrar extends JFrame implements IVista, ActionList
 
 	@Override
 	public void keyReleased(KeyEvent e) {
-
+		// TODO Auto-generated method stub
+		this.boton.setEnabled(
+				!(textFieldUsuario.getText().isEmpty()));
 	}
 
 	@Override
