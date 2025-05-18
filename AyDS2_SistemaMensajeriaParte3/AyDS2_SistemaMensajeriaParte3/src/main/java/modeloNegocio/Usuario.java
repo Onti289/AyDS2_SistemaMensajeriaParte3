@@ -31,7 +31,12 @@ public class Usuario implements Serializable {
 		this.ip = ip;
 		this.puerto = puerto;
 	}
-
+	public Usuario(String nickName) {
+		super();
+		this.nickName = nickName;
+		this.puerto=0;
+		this.ip=null;
+	}
 	public String getNickName() {
 		return nickName;
 	}
@@ -92,25 +97,21 @@ public class Usuario implements Serializable {
 		return this.mensajes;
 	}
 
-	public ArrayList<MensajeDTO> getChat(int puerto, String ip) {
+	public ArrayList<MensajeDTO> getChat(String nickname) {
 		ArrayList<MensajeDTO> chat = new ArrayList<>();
 		for (Mensaje m : mensajes) {
 			// aca ves si sos emisor o receptor
 			boolean yoSoyEmisor = m.getEmisor().equals(this);
 			boolean yoSoyReceptor = m.getReceptor().equals(this);
 			// aca se fija si CONTACTO que llega es el emisor o receptor
-			boolean otroEsEmisor = m.getEmisor().getPuerto() == puerto && m.getEmisor().getIp().equals(ip);
-			boolean otroEsReceptor = m.getReceptor().getPuerto() == puerto && m.getReceptor().getIp().equals(ip);
+			boolean otroEsEmisor = m.getEmisor().getNickName().equalsIgnoreCase(nickname);
+			boolean otroEsReceptor = m.getReceptor().getNickName().equalsIgnoreCase(nickname);
 			// Ya que no pueden ambos ser emisores o receptores
 			if ((yoSoyEmisor && otroEsReceptor) || (yoSoyReceptor && otroEsEmisor)) {
 				String nombre=m.getEmisor().getNickName();
-				int puertouser=m.getEmisor().getPuerto();
-				String ipuser=m.getEmisor().getIp();
-				UsuarioDTO emisor=new UsuarioDTO(nombre,puertouser,ipuser);
+				UsuarioDTO emisor=new UsuarioDTO(nombre);
 				nombre=m.getReceptor().getNickName();
-				puertouser=m.getReceptor().getPuerto();
-				ipuser=m.getReceptor().getIp();
-				UsuarioDTO receptor=new UsuarioDTO(nombre,puertouser,ipuser);
+				UsuarioDTO receptor=new UsuarioDTO(nombre);
 				chat.add(new MensajeDTO(m.getContenido(), m.getFechayhora(),emisor,receptor));
 			}
 		}
@@ -152,11 +153,11 @@ public class Usuario implements Serializable {
 		}
 	}
 
-	public Usuario getBuscaContacto(int puerto) {
+	public Usuario getBuscaContacto(String nickname) {
 		PriorityQueue<Usuario> agendaCopia = new PriorityQueue<>(agenda);
 		while (!agendaCopia.isEmpty()) {
 			Usuario contacto = agendaCopia.poll();
-			if (contacto.getPuerto() == puerto) {
+			if (contacto.getNickName().equalsIgnoreCase(nickname)) {
 				return contacto;
 			}
 		}

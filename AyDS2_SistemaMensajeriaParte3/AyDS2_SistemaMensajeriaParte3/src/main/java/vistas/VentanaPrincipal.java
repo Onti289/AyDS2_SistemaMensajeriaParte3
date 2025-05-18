@@ -151,11 +151,7 @@ public class VentanaPrincipal extends JFrame implements IVista, ActionListener, 
 		textAreaChat.setText("");
 		scrollPane.setViewportView(textAreaChat);
 		this.addWindowListener(new java.awt.event.WindowAdapter() {
-		    @Override
-		    public void windowClosing(java.awt.event.WindowEvent windowEvent) {
-		        controlador.getSistemaUsuario().medesconecto();
-		        System.exit(0);
-		    }
+		
 		});
 
 	}

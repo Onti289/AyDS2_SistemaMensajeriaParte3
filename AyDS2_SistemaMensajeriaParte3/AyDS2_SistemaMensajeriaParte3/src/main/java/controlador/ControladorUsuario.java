@@ -43,11 +43,11 @@ public class ControladorUsuario implements ActionListener, Observer {
 		this.ventana.setVisible(true);
 	}
 
-	public void setUser(String nickName, int puerto, String ip, String tipo) {
-		
-		this.sistemaUsuario.enviaSolicitudAServidor(nickName, puerto, ip, tipo);
+	public void setUser(String nickName, String tipo) {
+
+		this.sistemaUsuario.enviaSolicitudAServidor(nickName, tipo);
 	}
-	
+
 	public String getNickNamePuerto() {
 		return "Nickname:" + sistemaUsuario.getnickName() + "\nPuerto:" + sistemaUsuario.getPuerto();
 	}
@@ -68,7 +68,7 @@ public class ControladorUsuario implements ActionListener, Observer {
 		List<UsuarioDTO> lista = new ArrayList<UsuarioDTO>();
 		List<Usuario> copia = new ArrayList<>(sistemaUsuario.getListaConversaciones());
 		for (Usuario user : copia) {
-			lista.add(new UsuarioDTO(user.getNickName(), user.getPuerto(), user.getIp()));
+			lista.add(new UsuarioDTO(user.getNickName()));
 		}
 
 		return lista;
@@ -84,82 +84,72 @@ public class ControladorUsuario implements ActionListener, Observer {
 		this.ventana2.setVisible(true);
 	}
 
-	public int agregaContacto(String nickName, String ip, int puerto) {
+	public int agregaContacto(String nickName) {
 		int nroCondicionAgregado;
 		// Si puerto esta disponible es por que no existe ningun usuario con ese puerto
 
-		nroCondicionAgregado = this.sistemaUsuario.agregarContacto(nickName, ip, puerto);
-		
+		nroCondicionAgregado = this.sistemaUsuario.agregarContacto(nickName);
+
 		return nroCondicionAgregado;
 	}
 
-	public void cargaChat(int puerto, String ip) {
-		//String alias = this.sistemaUsuario.getAlias(puerto);
-		for (MensajeDTO msg : this.sistemaUsuario.getChat(puerto, ip)) {
+	public void cargaChat( String nickname) {
+		for (MensajeDTO msg : this.sistemaUsuario.getChat(nickname)) {
 			if (ventana instanceof VentanaPrincipal) {
-				/*
-				if (msg.getEmisor().getPuerto() == puerto) // el msg lo mando el contacto
-					((VentanaPrincipal) ventana).agregarMensajeAchat(msg.getContenido(), msg.getFechayhora(), alias);
-				else { // el msg lo manda el usuario */
-					((VentanaPrincipal) ventana).agregarMensajeAchat(msg.getContenido(), msg.getFechayhora(),
-							msg.getEmisor().getNombre());
-				//}
+				((VentanaPrincipal) ventana).agregarMensajeAchat(msg.getContenido(), msg.getFechayhora(),
+						msg.getEmisor().getNombre());
+				
 			}
 		}
 	}
 
-	public void actualizaListaConversacion(int puerto, String ip) {
-		this.sistemaUsuario.setContactoActual(puerto, ip);
+	public void actualizaListaConversacion(String nickname) {
+		this.sistemaUsuario.setContactoActual(nickname);
 	}
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		// TODO Auto-generated method stub
 		switch (e.getActionCommand()) {
-		
-		//llega aca cuado apreta boton registro en VentanaInicial
+
+		// llega aca cuado apreta boton registro en VentanaInicial
 		case Util.CTEREGISTRO:
 			if (this.ventana instanceof VentanaInicial) {
 				this.ventana.setVisible(false);
-				this.setVentana(new VentanaLoginORegistrar(this,Util.CTEREGISTRO,Util.CTEREGRISTRARSE,Util.CTEREGISTRAR));	
+				this.setVentana(
+						new VentanaLoginORegistrar(this, Util.CTEREGISTRO, Util.CTEREGRISTRARSE, Util.CTEREGISTRAR));
 			}
-			
+
 			break;
 		case Util.CTEINICIARSESION:
 			if (this.ventana instanceof VentanaInicial) {
 				this.ventana.setVisible(false);
-				this.setVentana(new VentanaLoginORegistrar(this,Util.CTEINICIOSESION,Util.CTEINICIARSESION,Util.CTELOGIN));					
+				this.setVentana(
+						new VentanaLoginORegistrar(this, Util.CTEINICIOSESION, Util.CTEINICIARSESION, Util.CTELOGIN));
 			}
 			break;
-		//llega aca cuando apreta boton registrar en VentanaRegistrarse
+		// llega aca cuando apreta boton registrar en VentanaRegistrarse
 		case Util.CTEREGISTRAR:
 
 			if (this.ventana instanceof VentanaLoginORegistrar) {
 				VentanaLoginORegistrar ventanaRegistrarse = (VentanaLoginORegistrar) this.ventana;
-				int puertoBuscado=this.sistemaUsuario.buscaPuerto();
-				this.sistemaUsuario.iniciarServidor(puertoBuscado);
-				//ip no deberia ser local deberia obtenerse de alguna manera
-				// o tal vez siempre es local? ya que el sistema usuario lo corre en su maquina
-				setUser(ventanaRegistrarse.getUsuario(), puertoBuscado, Util.IPLOCAL, Util.CTEREGISTRAR);
+				this.sistemaUsuario.estableceConexion();
+				setUser(ventanaRegistrarse.getUsuario(), Util.CTEREGISTRAR);
 			}
 
 			break;
-			//llega aca cuando apreta boton iniciar sesion en VentanaRegistrarse
+		// llega aca cuando apreta boton iniciar sesion en VentanaRegistrarse
 		case Util.CTELOGIN:
 
 			if (this.ventana instanceof VentanaLoginORegistrar) {
 				VentanaLoginORegistrar ventanaLogin = (VentanaLoginORegistrar) this.ventana;
-				int puertoBuscado=this.sistemaUsuario.buscaPuerto();
-				this.sistemaUsuario.iniciarServidor(puertoBuscado);
-				//ip no deberia ser local deberia obtenerse de alguna manera
-				// o tal vez siempre es local? ya que el sistema usuario lo corre en su maquina
-				setUser(ventanaLogin.getUsuario(), puertoBuscado,Util.IPLOCAL, Util.CTELOGIN);
-				
+				this.sistemaUsuario.estableceConexion();
+				setUser(ventanaLogin.getUsuario(), Util.CTELOGIN);
 			}
 
 			break;
 
-		case Util.CTEAGREGARCONTACTO: //muestra pantalla de directorio
+		case Util.CTEAGREGARCONTACTO: // muestra pantalla de directorio
 			this.sistemaUsuario.pedirListaUsuarios();
 			break;
 		case Util.CTENUEVACONVER:
@@ -169,7 +159,6 @@ public class ControladorUsuario implements ActionListener, Observer {
 		case Util.CTEENVIAR:
 			if (ventana instanceof VentanaPrincipal) {
 				String contenidoMensaje;
-
 				contenidoMensaje = ((VentanaPrincipal) ventana).getTextFieldMensaje();
 				UsuarioDTO user = ((VentanaPrincipal) ventana).getContactoConversacionActual();
 				this.sistemaUsuario.enviarMensajeServidor(user, contenidoMensaje);
@@ -178,10 +167,9 @@ public class ControladorUsuario implements ActionListener, Observer {
 		case Util.CTEINICIARCONVERSACION:
 			if (this.ventana2 instanceof VentanaContactos) {
 				VentanaContactos ventanaContactos = (VentanaContactos) this.ventana2;
-				
 				UsuarioDTO contacto = ventanaContactos.getUsuario();
-				this.cargaChat(contacto.getPuerto(), contacto.getIp());
-				this.actualizaListaConversacion(contacto.getPuerto(), contacto.getIp());
+				this.cargaChat(contacto.getNombre());
+				this.actualizaListaConversacion(contacto.getNombre());
 				// ACTUALIZA la lista en la ventana principal
 				if (ventana instanceof VentanaPrincipal) {
 					((VentanaPrincipal) ventana).actualizarListaChats(this.getListaConversaciones());
@@ -195,20 +183,18 @@ public class ControladorUsuario implements ActionListener, Observer {
 				this.ventana2.dispose();
 			}
 			break;
-		case Util.CTEAGREGAR: //agrega el contacto a la lista de contactos
+		case Util.CTEAGREGAR: // agrega el contacto a la lista de contactos
 			if (this.ventana2 instanceof VentanaDirectorio) {
 				VentanaDirectorio ventanaDirectorio = (VentanaDirectorio) this.ventana2;
 				UsuarioDTO usuario = ventanaDirectorio.getUsuario();
-	
-				puerto = usuario.getPuerto();
-				int nroCondicionAgregado = this.agregaContacto(usuario.getNombre(), usuario.getIp(), puerto);
+				int nroCondicionAgregado = this.agregaContacto(usuario.getNombre());
 				if (nroCondicionAgregado == 2) {
 					((VentanaDirectorio) ventana2).mostrarConfirmacionContactoAgregado();
 					ventana2.dispose(); // cerrar la ventana luego de agregar
 				} else {
 					if (nroCondicionAgregado == 1) {
 						((VentanaDirectorio) ventana2).mostrarErrorContactoYaAgendado();
-					} 
+					}
 				}
 			}
 			break;
@@ -224,7 +210,7 @@ public class ControladorUsuario implements ActionListener, Observer {
 			VentanaPrincipal vp = (VentanaPrincipal) ventana;
 			vp.setTextFieldNameContacto(contacto.getNombre());
 			vp.limpiarChat();
-			this.cargaChat(contacto.getPuerto(), contacto.getIp()); // Mostr s historial
+			this.cargaChat(contacto.getNombre()); // Mostr s historial
 		}
 	}
 
@@ -241,25 +227,17 @@ public class ControladorUsuario implements ActionListener, Observer {
 				if (ventana instanceof VentanaPrincipal) {
 					VentanaPrincipal vp = (VentanaPrincipal) ventana;
 					// chequeo si soy receptor
-					if (!(mensaje.getEmisor().getIp().equals(this.sistemaUsuario.getUsuario().getIp())
-							&& (mensaje.getEmisor().getPuerto() == this.sistemaUsuario.getUsuario().getPuerto()))) {
-						// this.sistemaMensajeria.getUsuario().recibirMensaje(mensaje);
+					if (!mensaje.getEmisor().getNickName().equalsIgnoreCase(this.sistemaUsuario.getUsuario().getNickName())){
 						// Si emisor es el contacto con el que estoy hablando muestra en pantalla
 						if ((vp.hayConversaciones()) && (!(vp.getContactoConversacionActual() == null))
-								&& mensaje.getEmisor().getIp().equals(vp.getContactoConversacionActual().getIp())
-								&& (mensaje.getEmisor().getPuerto() == vp.getContactoConversacionActual()
-										.getPuerto())) {
-							// String
-							// alias=this.sistemaMensajeria.getAlias(mensaje.getEmisor().getPuerto());
-							// vp.agregarMensajeAchat(mensaje.getContenido(),mensaje.getFechayhora(),alias);
+								&& mensaje.getEmisor().getNickName().equalsIgnoreCase(vp.getContactoConversacionActual().getNombre())) {
 							vp.limpiarChat();
-							this.cargaChat(mensaje.getEmisor().getPuerto(), mensaje.getEmisor().getIp()); // Mostr s
+							this.cargaChat(mensaje.getEmisor().getNickName()); // Mostrar 
 																											// historial
 						} // notifica llega cuando no hay conversaciones o no es contacto actual
 						else {
 							vp.actualizarListaChats(this.getListaConversaciones());
-							UsuarioDTO usuarioDTO = new UsuarioDTO(mensaje.getEmisor().getNickName(),
-									mensaje.getEmisor().getPuerto(), mensaje.getEmisor().getIp());
+							UsuarioDTO usuarioDTO = new UsuarioDTO(mensaje.getEmisor().getNickName());
 							vp.notificarNuevoMensaje(usuarioDTO);
 						}
 					}
@@ -270,62 +248,57 @@ public class ControladorUsuario implements ActionListener, Observer {
 
 			String mensaje = ((IOException) arg).getMessage();
 			((VentanaPrincipal) ventana).mostrarErrorEnvioMensaje(mensaje);
-		}
-		else {
-			if(arg instanceof Solicitud) { //pudo registrar o loguear a usuario
+		} else {
+			if (arg instanceof Solicitud) { // pudo registrar o loguear a usuario
 
-				Solicitud solicitud=(Solicitud)arg;
-				if(solicitud.getTipoSolicitud().equalsIgnoreCase(Util.CTEREGISTRO) || solicitud.getTipoSolicitud().equalsIgnoreCase(Util.CTELOGIN)) {//Si se registro o logueo
+				Solicitud solicitud = (Solicitud) arg;
+				if (solicitud.getTipoSolicitud().equalsIgnoreCase(Util.CTEREGISTRO)
+						|| solicitud.getTipoSolicitud().equalsIgnoreCase(Util.CTELOGIN)) {// Si se registro o logueo
 					this.ventana.setVisible(false);
 					this.setVentana(new VentanaPrincipal(this));
 					((VentanaPrincipal) ventana).TitulonameUsuario(solicitud.getNombre());
-					this.sistemaUsuario.enviaSolicitudAServidor(solicitud.getNombre(), solicitud.getPuerto(), solicitud.getIp(),Util.CTESOLICITARMENSAJES);
-				}
-				else { //no se pudo ni registrar ni loguear
-					if(solicitud.getTipoSolicitud().equalsIgnoreCase(Util.CTEUSUARIOLOGUEADO)) {
+					this.sistemaUsuario.enviaSolicitudAServidor(solicitud.getNombre(), Util.CTESOLICITARMENSAJES);
+				} else { // no se pudo ni registrar ni loguear
+					if (solicitud.getTipoSolicitud().equalsIgnoreCase(Util.CTEUSUARIOLOGUEADO)) {
 						((VentanaLoginORegistrar) ventana).mostrarErrorUsuarioYaLogueado();
-					}
-					else {
-						if(solicitud.getTipoSolicitud().equalsIgnoreCase(Util.CTEUSUERINEXISTENTE)) {
+					} else {
+						if (solicitud.getTipoSolicitud().equalsIgnoreCase(Util.CTEUSUERINEXISTENTE)) {
 							((VentanaLoginORegistrar) ventana).mostrarErrorUsuarioInexistente();
 						}
 					}
-					this.sistemaUsuario.cerrarServidor();
 				}
-			}
-			else {
-				if(arg instanceof List<?>) {
+			} else {
+				if (arg instanceof List<?>) {
 					List<?> lista = (List<?>) arg;
-					
+
 					String nombre = this.getSistemaUsuario().getnickName();
-					
+
 					List<UsuarioDTO> listaUsuarios = new ArrayList<>();
 
 					for (Object obj : lista) {
-						
-					    if (obj instanceof UsuarioDTO) {
-					    	UsuarioDTO u = (UsuarioDTO)obj;
-					    	if(!u.getNombre().equalsIgnoreCase(nombre))
-					           listaUsuarios.add(u);
-					    }
-					    else {
-					    	if(obj instanceof MensajeDTO) {
-					
-					    		MensajeDTO m=(MensajeDTO)obj;
-					    		((VentanaPrincipal)ventana).actualizarListaChats(this.getListaConversaciones());
-					    		((VentanaPrincipal)ventana).notificarNuevoMensaje(m.getEmisor());
-					    	}
-					    }
+
+						if (obj instanceof UsuarioDTO) {
+							UsuarioDTO u = (UsuarioDTO) obj;
+							if (!u.getNombre().equalsIgnoreCase(nombre))
+								listaUsuarios.add(u);
+						} else {
+							if (obj instanceof MensajeDTO) {
+
+								MensajeDTO m = (MensajeDTO) obj;
+								((VentanaPrincipal) ventana).actualizarListaChats(this.getListaConversaciones());
+								((VentanaPrincipal) ventana).notificarNuevoMensaje(m.getEmisor());
+							}
+						}
 					}
 
 					Object obj;
-					obj=lista.get(0);
-					if(obj instanceof UsuarioDTO) {
-						this.setVentana2(new VentanaDirectorio(this,listaUsuarios));
+					obj = lista.get(0);
+					if (obj instanceof UsuarioDTO) {
+						this.setVentana2(new VentanaDirectorio(this, listaUsuarios));
 					}
-					
-					//Aca hacer que vista con algun metodo tome esa lista
-					//y lo muestre por pantalla
+
+					// Aca hacer que vista con algun metodo tome esa lista
+					// y lo muestre por pantalla
 				}
 			}
 		}

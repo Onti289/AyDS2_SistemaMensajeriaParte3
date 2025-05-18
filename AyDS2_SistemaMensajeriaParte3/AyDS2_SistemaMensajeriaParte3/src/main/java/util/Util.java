@@ -31,5 +31,6 @@ public class Util {
 	public static final String CTESERVERDESCONECTADO = "Desconectado";
 	public static final String CTE_ACTIVO = "Activo";
 	public static final String CTE_REDUNDANTE = "Redundante";
+	public static final String SOLICITA_PUERTO_SERVIDOR = "Solicita puerto servidor";
 
 }

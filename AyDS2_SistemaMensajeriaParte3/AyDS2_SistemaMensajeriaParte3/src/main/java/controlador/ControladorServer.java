@@ -12,8 +12,8 @@ import vistas.VentanaRegistraServidor;
 import vistas.VentanaServidor;
 
 public class ControladorServer implements ActionListener {
-	SistemaServidor sistemaServidor;
-	IVista ventana;
+	private SistemaServidor sistemaServidor;
+	private IVista ventana;
 	
 	public ControladorServer(SistemaServidor sistemaServidor) {
 		this.ventana = new VentanaRegistraServidor();
@@ -25,18 +25,19 @@ public class ControladorServer implements ActionListener {
 		this.ventana = ventana;
 		this.ventana.setVisible(true);
 	}
+	public void detenerServidor() {
+		this.sistemaServidor.detenerServidor();
+	}
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		switch (e.getActionCommand()) {
 		case Util.CTEREGISTRO: //registra servidor
 			VentanaRegistraServidor ventanaRegistraServidor= (VentanaRegistraServidor) this.ventana;
-			System.out.println("prueba si llega bien puerto"+ventanaRegistraServidor.getCampoPuerto());
 			boolean disponible=this.sistemaServidor.puertoDisponible(ventanaRegistraServidor.getCampoPuerto());
 			if(disponible) {
-				System.out.println("LEFAF");
 				sistemaServidor.registraServidor(ventanaRegistraServidor.getCampoIP(),ventanaRegistraServidor.getCampoPuerto());
 				this.ventana.setVisible(false);
-				this.setVentana(new VentanaServidor(ventanaRegistraServidor.getCampoPuerto(),ventanaRegistraServidor.getCampoIP()));
+				this.setVentana(new VentanaServidor(ventanaRegistraServidor.getCampoPuerto(),ventanaRegistraServidor.getCampoIP(),this));
 			}
 			else { 
 				ventanaRegistraServidor.mostrarErrorServidorYaRegistrado();

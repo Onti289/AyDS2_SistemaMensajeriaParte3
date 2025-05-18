@@ -14,7 +14,11 @@ public class UsuarioDTO implements Serializable {
         this.puerto = puerto;
         this.ip = ip;
     }
-
+    public UsuarioDTO(String nombre) {
+    	this.nombre = nombre;
+    	this.puerto = 0;
+        this.ip = null;
+    }
     public String getNombre() {
         return nombre;
     }

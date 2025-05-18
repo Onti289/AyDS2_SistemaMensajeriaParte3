@@ -12,6 +12,9 @@ public class Solicitud implements Serializable {
         this.tipoSolicitud = tipo;
         this.usuariodto = u;
     }
+    public Solicitud(String tipo) {
+        this.tipoSolicitud = tipo;
+    }
     public String getNombre() {
         return this.usuariodto.getNombre();
     }

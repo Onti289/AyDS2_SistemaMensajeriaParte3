@@ -17,6 +17,7 @@ import util.Util;
 public class SistemaServidor {
 
 	private ArrayList<Usuario> listaUsuarios = new ArrayList<Usuario>();
+	
 	private ArrayList<Usuario> listaConectados = new ArrayList<Usuario>();
 	private static SistemaServidor servidor_instancia = null;
 	private ArrayList<Mensaje> mensajesPendientes=new ArrayList<Mensaje>();
@@ -24,6 +25,13 @@ public class SistemaServidor {
 	private int puerto;
 	private Thread heartbeatThread;
 	private volatile boolean heartbeatActivo = true;
+	private Socket socketMonitor;
+	private ObjectOutputStream oos;
+	private ObjectInputStream ois;
+
+	private volatile boolean servidorActivo = true;
+	private ServerSocket serverSocket; // <-- lo haremos accesible
+	private Thread serverThread;
 
 	private SistemaServidor() {
 
@@ -51,14 +59,15 @@ public class SistemaServidor {
 			oos.flush();
 			oos.close();
 		} catch (IOException e) {
-
+			e.printStackTrace();
 		}
 	}
 
 	public void iniciaServidor(int puerto) {
-		Thread serverThread = new Thread(() -> {
-			try (ServerSocket serverSocket = new ServerSocket(puerto)) {
-				while (true) {
+		 serverThread = new Thread(() -> {
+			try {
+				serverSocket = new ServerSocket(puerto);
+				while (servidorActivo) {
 					
 					Socket clienteSocket = serverSocket.accept();
 
@@ -116,12 +125,15 @@ public class SistemaServidor {
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
-					detenerHeartbeat();
 					clienteSocket.close();
 				}
-			} catch (Exception e) {
+			} catch (Exception e) { //aca podriamos reintentar iniciar servidor
+				e.printStackTrace();
 				System.err.println("Error en el servidor central: " + e.getMessage());
 			}
+			finally {
+	            detenerHeartbeat();
+	        }
 		});
 		serverThread.start();
 	}
@@ -192,7 +204,7 @@ public class SistemaServidor {
 			oos.flush();
 			oos.close();
 		} catch (IOException e) {
-
+			e.printStackTrace();
 		}
 	}
 	private void retornaLista(String ip, int puerto) {
@@ -202,7 +214,7 @@ public class SistemaServidor {
 			oos.flush();
 			oos.close();
 		} catch (IOException e) {
-
+			e.printStackTrace();
 		}
 	}
 
@@ -283,31 +295,35 @@ public class SistemaServidor {
 	public void registraServidor(String ip, int puerto) {
 			//obtener ip y puerto de monitor desde archivo
 			try (Socket socket = new Socket(Util.IPLOCAL, Util.PUERTO_MONITOR)) { 
-			    ObjectOutputStream oos = null;
-			    oos = new ObjectOutputStream(socket.getOutputStream());
-			    this.ip=ip;
+				this.socketMonitor=socket;
+			    this.oos = new ObjectOutputStream(this.socketMonitor.getOutputStream());
+			    this.oos.flush();
+			    this.ois = new ObjectInputStream(this.socketMonitor.getInputStream());
 			    this.puerto=puerto;
+			    this.ip=ip;
 			    ServidorDTO servidor = new ServidorDTO(puerto,ip);
+			    System.out.println("Servidor conectado al monitor: IP remota = " + this.socketMonitor.getInetAddress().getHostAddress()
+		                   + ", puerto remoto = " + this.socketMonitor.getPort()
+		                   + ", puerto local = " + this.socketMonitor.getLocalPort());
 			    oos.writeObject(servidor);
-			    oos.flush();
-			    oos.close();  	
+				oos.flush();
 			    this.iniciaServidor(puerto);
 			    Heartbeat();
 			}
 			catch (IOException e) {
-				System.out.println("error");
+				e.printStackTrace();
 			}
 		}
 
 	private void Heartbeat() {
 		heartbeatThread = new Thread(() -> {
 			while (heartbeatActivo) {
-				try (Socket socket = new Socket(Util.IPLOCAL, Util.PUERTO_MONITOR)) { 
-					ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+				try { 
 					ServidorDTO servidor = new ServidorDTO(this.puerto, this.ip);
 					oos.writeObject(servidor);
 					oos.flush();
 				} catch (IOException e) {
+					e.printStackTrace();
 					System.err.println("Error en Heartbeat: " + e.getMessage());
 				}
 
@@ -322,13 +338,32 @@ public class SistemaServidor {
 		heartbeatThread.start();
 	}
 	public void detenerHeartbeat() {
-		heartbeatActivo = false;
-		if (heartbeatThread != null && heartbeatThread.isAlive()) {
-			heartbeatThread.interrupt(); // Si está durmiendo
-		}
+	    heartbeatActivo = false;
+	    try {
+	        if (ois != null) ois.close();
+	        if (oos != null) oos.close();
+	        if (socketMonitor != null) socketMonitor.close();
+	    } catch (IOException e) {
+	        e.printStackTrace();
+	    }
+	}
+	
+	public void detenerServidor() {
+	    servidorActivo = false;
+	    try {
+	        if (serverSocket != null && !serverSocket.isClosed()) {
+	            serverSocket.close(); // Esto hará que serverSocket.accept() lance una excepción y termine el bucle
+	        }
+	        if (serverThread != null && serverThread.isAlive()) {
+	            serverThread.join(); // Esperamos a que el hilo termine
+	        }
+	    } catch (IOException | InterruptedException e) {
+	        e.printStackTrace();
+	    }
+	    detenerHeartbeat();
 	}
 
 
-		
+
 	}
 
