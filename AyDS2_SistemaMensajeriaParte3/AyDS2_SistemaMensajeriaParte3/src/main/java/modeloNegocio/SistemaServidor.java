@@ -70,7 +70,7 @@ public class SistemaServidor {
 				while (servidorActivo) {
 					
 					Socket clienteSocket = serverSocket.accept();
-
+					
 					try (ObjectInputStream ois = new ObjectInputStream(clienteSocket.getInputStream())) {
 						Object recibido = ois.readObject();
 						
@@ -128,8 +128,7 @@ public class SistemaServidor {
 					clienteSocket.close();
 				}
 			} catch (Exception e) { //aca podriamos reintentar iniciar servidor
-				e.printStackTrace();
-				System.err.println("Error en el servidor central: " + e.getMessage());
+				
 			}
 			finally {
 	            detenerHeartbeat();
@@ -294,8 +293,9 @@ public class SistemaServidor {
 
 	public void registraServidor(String ip, int puerto) {
 			//obtener ip y puerto de monitor desde archivo
-			try (Socket socket = new Socket(Util.IPLOCAL, Util.PUERTO_MONITOR)) { 
-				this.socketMonitor=socket;
+		
+			try { 
+				this.socketMonitor=new Socket(Util.IPLOCAL, Util.PUERTO_MONITOR);
 			    this.oos = new ObjectOutputStream(this.socketMonitor.getOutputStream());
 			    this.oos.flush();
 			    this.ois = new ObjectInputStream(this.socketMonitor.getInputStream());

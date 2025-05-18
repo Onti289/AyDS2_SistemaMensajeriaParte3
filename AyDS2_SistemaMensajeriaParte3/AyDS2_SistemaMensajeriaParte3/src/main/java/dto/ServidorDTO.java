@@ -60,5 +60,10 @@ public class ServidorDTO implements Serializable {
 	public void setNro(int nro) {
 		this.nro=nro;
 	}
+	@Override
+	public String toString() {
+		return "ServidorDTO [enLinea=" + enLinea + ", principal=" + principal + ", puerto=" + puerto + ", ip=" + ip
+				+ ", nro=" + nro + ", pulso=" + pulso + "]";
+	}
 	
 }
