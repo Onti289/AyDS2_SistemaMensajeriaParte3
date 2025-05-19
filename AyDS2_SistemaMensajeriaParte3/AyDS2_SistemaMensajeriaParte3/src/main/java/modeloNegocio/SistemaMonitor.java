@@ -18,7 +18,7 @@ public class SistemaMonitor extends Observable {
 	private ArrayList<ServidorDTO> listaServidores = new ArrayList<ServidorDTO>();
 	private static SistemaMonitor monitor_instancia = null;
 	private HashMap<String, ConexionServidor> conexiones = new HashMap<>();
-
+	private ServerSocket serverSocketMonitor; 
 	private SistemaMonitor() {
 
 	}
@@ -78,12 +78,12 @@ public class SistemaMonitor extends Observable {
 
 	public void inicia() {
 		Thread serverThread = new Thread(() -> {
-			int i=0;
-			try (ServerSocket serverSocket = new ServerSocket(Util.PUERTO_MONITOR)) {
+			try {
+				serverSocketMonitor = new ServerSocket(Util.PUERTO_MONITOR);
 				controlaPulsos(); // esto debería ir en un hilo separado si es bloqueante
 			
 				while (true) {
-					Socket servidorSocket = serverSocket.accept();
+					Socket servidorSocket = serverSocketMonitor.accept();
 					Socket finalServidorSocket = servidorSocket;
 			
 					Thread handlerThread = new Thread(() -> {

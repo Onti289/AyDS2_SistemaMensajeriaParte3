@@ -11,6 +11,8 @@ import java.util.Observer;
 import java.util.PriorityQueue;
 
 import dto.MensajeDTO;
+import dto.RespuestaListaMensajes;
+import dto.RespuestaListaUsuarios;
 import dto.UsuarioDTO;
 import modeloNegocio.*;
 import util.Util;
@@ -58,7 +60,7 @@ public class ControladorUsuario implements ActionListener, Observer {
 		Usuario user;
 		while (!copia.isEmpty()) {
 			user = copia.poll();
-			lista.add(new UsuarioDTO(user.getNickName(), user.getPuerto(), user.getIp()));
+			lista.add(new UsuarioDTO(user.getNickName()));
 		}
 
 		return lista;
@@ -257,6 +259,7 @@ public class ControladorUsuario implements ActionListener, Observer {
 					this.ventana.setVisible(false);
 					this.setVentana(new VentanaPrincipal(this));
 					((VentanaPrincipal) ventana).TitulonameUsuario(solicitud.getNombre());
+					System.out.println("11"+ solicitud.getTipoSolicitud());
 					this.sistemaUsuario.enviaSolicitudAServidor(solicitud.getNombre(), Util.CTESOLICITARMENSAJES);
 				} else { // no se pudo ni registrar ni loguear
 					if (solicitud.getTipoSolicitud().equalsIgnoreCase(Util.CTEUSUARIOLOGUEADO)) {
@@ -268,34 +271,36 @@ public class ControladorUsuario implements ActionListener, Observer {
 					}
 				}
 			} else {
-				if (arg instanceof List<?>) {
-					List<?> lista = (List<?>) arg;
-
-					String nombre = this.getSistemaUsuario().getnickName();
-
-					List<UsuarioDTO> listaUsuarios = new ArrayList<>();
-
+				if (arg instanceof RespuestaListaMensajes) {
+					RespuestaListaMensajes respuesta = (RespuestaListaMensajes) arg;
+					List<MensajeDTO> lista = respuesta.getLista();
 					for (Object obj : lista) {
-
+						MensajeDTO m = (MensajeDTO) obj;
+						((VentanaPrincipal) ventana).actualizarListaChats(this.getListaConversaciones());
+						((VentanaPrincipal) ventana).notificarNuevoMensaje(m.getEmisor());
 						if (obj instanceof UsuarioDTO) {
-							UsuarioDTO u = (UsuarioDTO) obj;
-							if (!u.getNombre().equalsIgnoreCase(nombre))
-								listaUsuarios.add(u);
+							
 						} else {
-							if (obj instanceof MensajeDTO) {
-
-								MensajeDTO m = (MensajeDTO) obj;
-								((VentanaPrincipal) ventana).actualizarListaChats(this.getListaConversaciones());
-								((VentanaPrincipal) ventana).notificarNuevoMensaje(m.getEmisor());
-							}
+							
 						}
 					}
-
-					Object obj;
-					obj = lista.get(0);
-					if (obj instanceof UsuarioDTO) {
+				}
+				else {
+					if (arg instanceof RespuestaListaUsuarios) {
+						RespuestaListaUsuarios respuesta=(RespuestaListaUsuarios) arg;
+						List<UsuarioDTO> lista = respuesta.getLista();
+						List<UsuarioDTO> listaUsuarios = new ArrayList<>();
+						String nombre = this.getSistemaUsuario().getnickName();
+						for(Object obj : lista) {	
+						UsuarioDTO u = (UsuarioDTO) obj;
+						if (!u.getNombre().equalsIgnoreCase(nombre)) {
+							listaUsuarios.add(u);
+						}
 						this.setVentana2(new VentanaDirectorio(this, listaUsuarios));
 					}
+				}
+					
+					
 
 					// Aca hacer que vista con algun metodo tome esa lista
 					// y lo muestre por pantalla

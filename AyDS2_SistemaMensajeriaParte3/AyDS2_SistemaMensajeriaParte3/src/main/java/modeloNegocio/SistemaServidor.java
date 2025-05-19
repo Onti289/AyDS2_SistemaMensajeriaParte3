@@ -45,16 +45,7 @@ public class SistemaServidor {
 			servidor_instancia = new SistemaServidor();
 		return servidor_instancia;
 	}
-
-	private boolean existeUsuarioPorNombre(List<Usuario> lista, String nombreBuscado) {
-		for (Usuario u : lista) {
-			if (u.getNickName().equalsIgnoreCase(nombreBuscado)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
+	
 	private void enviaRespuestaUsuario(Solicitud usuario) {
 		try {
 			oos.writeObject(usuario);
@@ -66,9 +57,10 @@ public class SistemaServidor {
 
 	public void iniciaServidor(int puerto) {
 	    servidorActivo = true;
-
+	    
 	    serverThread = new Thread(() -> {
-	        try (ServerSocket serverSocket = new ServerSocket(puerto)) {
+	        try {
+	        	this.serverSocket=new ServerSocket(puerto);
 	            while (servidorActivo) {
 	                Socket clienteSocket = serverSocket.accept();
 	                Thread clienteHandler = new Thread(() -> {
@@ -79,13 +71,13 @@ public class SistemaServidor {
 	                        
 	                        while (true) {
 	                            Object recibido = ois.readObject();
-
+	                            
 	                            if (recibido instanceof Solicitud) {
 	                                Solicitud solicitud = (Solicitud) recibido;
-
+	                           
 	                                switch (solicitud.getTipoSolicitud()) {
 	                                    case Util.SOLICITA_LISTA_USUARIO:
-	                                        retornaLista(solicitud.getIp(), solicitud.getPuerto());
+	                                        retornaLista();
 	                                        break;
 
 	                                    case Util.CTEREGISTRAR:
@@ -122,12 +114,9 @@ public class SistemaServidor {
 	                                        break;
 
 	                                    case Util.CTESOLICITARMENSAJES:
+	                                    	System.out.println("22"+ solicitud.getTipoSolicitud());
 	                                        UsuarioDTO usuario = solicitud.getUsuarioDTO();
-	                                        retornaListaMensajesPendientes(
-	                                            usuario.getIp(),
-	                                            usuario.getPuerto(),
-	                                            entregarMensajesPendientes(usuario.getNombre(), usuario.getIp(), usuario.getPuerto())
-	                                        );
+	                                        retornaListaMensajesPendientes(entregarMensajesPendientes(usuario.getNombre()));
 	                                        break;
 
 	                                    default:
@@ -168,7 +157,7 @@ public class SistemaServidor {
 			return false; // El puerto ya esta  en uso
 		}
 	}
-	private List<MensajeDTO> entregarMensajesPendientes(String nombre,String ip,int puerto) {
+	private List<MensajeDTO> entregarMensajesPendientes(String nombre) {
 		int i=0;
 		Mensaje m;
 		MensajeDTO mdto;
@@ -178,14 +167,10 @@ public class SistemaServidor {
 		while(i<this.mensajesPendientes.size()) {
 			m=this.mensajesPendientes.get(i);
 			String nombreuser=m.getEmisor().getNickName();
-			int puertouser=m.getEmisor().getPuerto();
-			String ipuser=m.getEmisor().getIp();
-			uemisor=new UsuarioDTO(nombreuser,puertouser,ipuser);
+			uemisor=new UsuarioDTO(nombreuser);
 			nombreuser=m.getReceptor().getNickName();
-			puertouser=m.getReceptor().getPuerto();
-			ipuser=m.getReceptor().getIp();
-			ureceptor=new UsuarioDTO(nombreuser,puertouser,ipuser);
-			if(ureceptor.getNombre().equalsIgnoreCase(nombre) && ureceptor.getPuerto()==puerto && ureceptor.getIp().equalsIgnoreCase(ip)) {
+			ureceptor=new UsuarioDTO(nombreuser);
+			if(ureceptor.getNombre().equalsIgnoreCase(nombre)) {
 				mdto=new MensajeDTO(m.getContenido(),m.getFechayhora(),uemisor,ureceptor);
 				listamsj.add(mdto);
 				this.mensajesPendientes.remove(i);
@@ -198,11 +183,10 @@ public class SistemaServidor {
 	}
 
 	private void enviarMensaje(Mensaje mensaje) {
-		try (Socket socket = new Socket(mensaje.getReceptor().getIp(), mensaje.getReceptor().getPuerto())) {
-			ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+		try {
 			oos.writeObject(mensaje);
 			oos.flush();
-			oos.close();
+		//	oos.close();
 		} catch (IOException e) {
 			this.mensajesPendientes.add(mensaje);
 		}
@@ -222,22 +206,21 @@ public class SistemaServidor {
 	    }
 	}
 
-	private void retornaListaMensajesPendientes(String ip, int puerto,List<MensajeDTO> msjPendientes) {
-		try (Socket socket = new Socket(ip, puerto)) {
-			ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
-			oos.writeObject(msjPendientes);
+	private void retornaListaMensajesPendientes(List<MensajeDTO> msjPendientes) {
+		try{
+			RespuestaListaMensajes listaRespuesta=new RespuestaListaMensajes(msjPendientes);
+			oos.writeObject(listaRespuesta);
 			oos.flush();
-			oos.close();
+			//oos.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
-	private void retornaLista(String ip, int puerto) {
-		try (Socket socket = new Socket(ip, puerto)) {
-			ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+	private void retornaLista() {
+		try {
 			oos.writeObject(obtenerListaUsuariosDTO());
 			oos.flush();
-			oos.close();
+			//oos.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -246,7 +229,7 @@ public class SistemaServidor {
 	private List<UsuarioDTO> obtenerListaUsuariosDTO() {
 		List<UsuarioDTO> listaDTO = new ArrayList<>();
 		for (Usuario u : this.listaUsuarios) {
-			listaDTO.add(new UsuarioDTO(u.getNickName(), u.getPuerto(), u.getIp()));
+			listaDTO.add(new UsuarioDTO(u.getNickName()));
 		}
 		return listaDTO;
 	}
@@ -259,11 +242,11 @@ public class SistemaServidor {
 		}
 		return false;
 	}
-
+	
 	public boolean registrarUsuario(UsuarioDTO usuariodto) {
 		boolean registro = true;
-		if (!existeUsuarioPorNombre(usuariodto.getNombre()) && !puertoEIpEnUso(usuariodto.getIp(),usuariodto.getPuerto())) {
-			Usuario usuario = new Usuario(usuariodto.getNombre(), usuariodto.getPuerto(), usuariodto.getIp());
+		if (!existeUsuarioPorNombre(usuariodto.getNombre())) {
+			Usuario usuario = new Usuario(usuariodto.getNombre());
 			this.listaUsuarios.add(usuario);
 			this.listaConectados.add(usuario);
 		} else {
@@ -272,14 +255,6 @@ public class SistemaServidor {
 		return registro;
 	}
 	
-	private boolean puertoEIpEnUso(String ip,int puerto) {
-		for(Usuario u: this.listaUsuarios) {
-			if(u.getIp().equalsIgnoreCase(ip) && u.getPuerto()==puerto) {
-				return true;	
-			}
-		}
-		return false;
-	}
 
 	public boolean estaConectado(String nombre) {
 			for(Usuario u : this.listaConectados) {
@@ -289,23 +264,10 @@ public class SistemaServidor {
 			}
 		return false;
 	}
-
-	public boolean puertoEIpCorrecto(String nickName, int puerto, String IP) {
-		for (Usuario u : listaUsuarios) {
-			if (u.getNickName().equalsIgnoreCase(nickName) && u.getPuerto() == puerto
-					&& u.getIp().equalsIgnoreCase(IP)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
 	public int loginUsuario(UsuarioDTO usuario) {
 		int tipo = 1;// usuario existente pero no conectado
 		String nombre = usuario.getNombre();
-		String ip     = usuario.getIp();
-		int puerto    = usuario.getPuerto();
-		if (this.existeUsuarioPorNombre(nombre) && this.puertoEIpCorrecto(nombre, puerto,ip )) {
+		if (this.existeUsuarioPorNombre(nombre)) {
 			if (this.estaConectado(nombre)) {
 				tipo = 2;
 				// usuario existe pero esta logueado

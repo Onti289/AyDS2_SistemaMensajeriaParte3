@@ -8,6 +8,8 @@ import java.net.Socket;
 import java.time.LocalDateTime;
 import java.util.*;
 import dto.ContactoDTO;
+import dto.RespuestaListaMensajes;
+import dto.RespuestaListaUsuarios;
 import dto.MensajeDTO;
 import dto.UsuarioDTO;
 import excepciones.ErrorEnvioMensajeException;
@@ -43,7 +45,7 @@ public class SistemaUsuario extends Observable {
 	public void pedirListaUsuarios() {
 			try {
 			Solicitud solicitud = new Solicitud(
-					new UsuarioDTO(this.getnickName(), this.getPuerto(), this.getUsuario().getIp()),
+					new UsuarioDTO(this.getnickName()),
 					Util.SOLICITA_LISTA_USUARIO);
 			oos.writeObject(solicitud);
 			oos.flush();
@@ -53,8 +55,8 @@ public class SistemaUsuario extends Observable {
 		    }
 	}
 
-	public void setUsuario(String nickname, int puerto, String ip) {
-		this.usuario = new Usuario(nickname, puerto, ip);
+	public void setUsuario(String nickname) {
+		this.usuario = new Usuario(nickname);
 	}
 
 	public boolean existeContactoPorNombre(PriorityQueue<Usuario> lista, String nombreBuscado) {
@@ -128,55 +130,56 @@ public class SistemaUsuario extends Observable {
 			Thread escuchaServidor = new Thread(() -> {
 				try {
 					while (true) {
-					
+
 						Object recibido = ois.readObject();
-						
+
 						if (recibido instanceof Mensaje) {
 							Mensaje mensaje = (Mensaje) recibido;
+							System.out.println("1");
 							this.usuario.recibirMensaje(mensaje);
 							setChanged(); // importante
 							notifyObservers(mensaje);
 
 						} else {// si llega aca es por que el server lo pudo registrar o loguear
-							
+
 							if (recibido instanceof Solicitud) {
 								Solicitud solicitud = (Solicitud) recibido;
+								System.out.println("2");
 								// Si registra o loguea lo tiene que crear igual por que inicio de 0 el sistema
 								// usuario
 								if (solicitud.getTipoSolicitud().equalsIgnoreCase(Util.CTEREGISTRO)
 										|| solicitud.getTipoSolicitud().equalsIgnoreCase(Util.CTELOGIN)) {
-									setUsuario(solicitud.getNombre(), solicitud.getPuerto(), solicitud.getIp());
+									setUsuario(solicitud.getNombre());
 								}
 								setChanged(); // importante
 								notifyObservers(solicitud);
 							} else {
-								if (recibido instanceof List<?>) {
-									List<?> lista = (List<?>) recibido;
-									if (!lista.isEmpty() && lista.get(0) instanceof UsuarioDTO) {
-										List<UsuarioDTO> usuarios = (List<UsuarioDTO>) lista;
+								if (recibido instanceof RespuestaListaMensajes) {
+									RespuestaListaMensajes respuesta = (RespuestaListaMensajes) recibido;
+									List<MensajeDTO> mensajes = respuesta.getLista();
+									System.out.println("4");
+									for (MensajeDTO m : mensajes) {
+										String nick = m.getEmisor().getNombre();
+										int puertoaux = m.getEmisor().getPuerto();
+										String ip = m.getEmisor().getIp();
+										Usuario emisor = new Usuario(nick, puertoaux, ip);
+										nick = m.getReceptor().getNombre();
+										puertoaux = m.getReceptor().getPuerto();
+										ip = m.getReceptor().getIp();
+										Usuario receptor = new Usuario(nick, puertoaux, ip);
+										this.usuario.recibirMensaje(
+												new Mensaje(m.getContenido(), m.getFechayhora(), emisor, receptor));
+									}
+									setChanged(); // importante
+									notifyObservers(mensajes);
+								} else {
+									if (recibido instanceof RespuestaListaUsuarios) {
+										RespuestaListaUsuarios respuesta=(RespuestaListaUsuarios) recibido;
+										List<UsuarioDTO> usuarios = respuesta.getLista();
+										System.out.println("3");
 										setChanged(); // importante
 										notifyObservers(usuarios);
-									} else {
-										if (!lista.isEmpty() && lista.get(0) instanceof MensajeDTO) {
-											List<MensajeDTO> mensajes = (List<MensajeDTO>) lista;
-
-											for (MensajeDTO m : mensajes) {
-												String nick = m.getEmisor().getNombre();
-												int puertoaux = m.getEmisor().getPuerto();
-												String ip = m.getEmisor().getIp();
-												Usuario emisor = new Usuario(nick, puertoaux, ip);
-												nick = m.getReceptor().getNombre();
-												puertoaux = m.getReceptor().getPuerto();
-												ip = m.getReceptor().getIp();
-												Usuario receptor = new Usuario(nick, puertoaux, ip);
-												this.usuario.recibirMensaje(new Mensaje(m.getContenido(),
-														m.getFechayhora(), emisor, receptor));
-											}
-											setChanged(); // importante
-											notifyObservers(mensajes);
-										}
 									}
-
 								}
 
 							}
