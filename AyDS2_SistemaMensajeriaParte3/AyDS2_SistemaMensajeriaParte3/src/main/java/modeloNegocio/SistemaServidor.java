@@ -142,9 +142,9 @@ public class SistemaServidor {
 	                clienteHandler.start();
 	            }
 	        } catch (IOException e) {
+	        	e.printStackTrace();
+	        	detenerServidor();
 	            System.err.println("Error al iniciar el servidor: " + e.getMessage());
-	        } finally {
-	            detenerHeartbeat();
 	        }
 	    });
 	    serverThread.start();

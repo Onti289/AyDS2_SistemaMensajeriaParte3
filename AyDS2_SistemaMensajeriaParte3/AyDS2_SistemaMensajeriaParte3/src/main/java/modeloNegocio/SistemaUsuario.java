@@ -171,14 +171,13 @@ public class SistemaUsuario extends Observable {
 												new Mensaje(m.getContenido(), m.getFechayhora(), emisor, receptor));
 									}
 									setChanged(); // importante
-									notifyObservers(mensajes);
+									notifyObservers(recibido);
 								} else {
 									if (recibido instanceof RespuestaListaUsuarios) {
 										RespuestaListaUsuarios respuesta=(RespuestaListaUsuarios) recibido;
-										List<UsuarioDTO> usuarios = respuesta.getLista();
 										System.out.println("3");
 										setChanged(); // importante
-										notifyObservers(usuarios);
+										notifyObservers(recibido);
 									}
 								}
 
