@@ -30,13 +30,13 @@ public class VentanaServidor extends JFrame implements IVista {
         panelPrincipal.add(etiquetaEstado);
         
         setVisible(true);
-        this.addWindowListener(new WindowAdapter() {
+      /*  this.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
             	VentanaServidor.this.controlador.detenerServidor();
             }
         });
-
+*/
     }
 
     @Override
@@ -53,6 +53,9 @@ public class VentanaServidor extends JFrame implements IVista {
 	@Override
 	public void setActionListener(ActionListener controlador) {
 		// TODO Auto-generated method stub
+		
+	}
+	public void mostrarErrorServidoresCaidos(String error) {
 		
 	}
 }

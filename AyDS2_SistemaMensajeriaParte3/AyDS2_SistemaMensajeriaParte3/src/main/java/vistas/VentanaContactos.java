@@ -13,6 +13,7 @@ import java.awt.GridLayout;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.JButton;
 import java.awt.event.ActionListener;
 import java.util.List;
@@ -85,7 +86,8 @@ public class VentanaContactos extends JFrame implements IVista, ActionListener {
 	public void actionPerformed(ActionEvent e) {
 
 	}
-
+	public void mostrarErrorServidoresCaidos(String error) {
+	}
 	@Override
 	public void setActionListener(ActionListener controlador) {
 		// TODO Auto-generated method stub

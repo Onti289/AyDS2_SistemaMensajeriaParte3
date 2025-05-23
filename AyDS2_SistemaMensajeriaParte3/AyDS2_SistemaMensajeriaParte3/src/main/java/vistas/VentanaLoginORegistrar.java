@@ -115,6 +115,9 @@ public class VentanaLoginORegistrar extends JFrame implements IVista, ActionList
 	    this.boton.setEnabled(false);
 	    refrescaPantalla();
 	}
+	public void mostrarErrorServidoresCaidos(String error) {
+		JOptionPane.showMessageDialog(this, error, "Error", JOptionPane.ERROR_MESSAGE);
+	}
 	@Override
 	public void keyTyped(KeyEvent e) {
 		// TODO Auto-generated method stub

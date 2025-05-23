@@ -19,7 +19,7 @@ public class ConexionUsuario {
 		this.ois = ois;
 		this.socket = socket;
 	}
-	public UsuarioDTO getServidor() {
+	public UsuarioDTO getUsuario() {
 		return usuario;
 	}
 	public ObjectOutputStream getOos() {

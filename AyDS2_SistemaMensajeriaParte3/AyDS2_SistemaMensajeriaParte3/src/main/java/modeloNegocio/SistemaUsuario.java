@@ -21,8 +21,8 @@ public class SistemaUsuario extends Observable {
 	private int puerto_servidor;
 	// Socket y flujos para comunicarse con el servidor
 	private Socket socketServidor;
-	private ObjectOutputStream oos;
-	private ObjectInputStream ois;
+	private ObjectOutputStream oos=null;
+	private ObjectInputStream ois=null;
 
 	private SistemaUsuario() {
 
@@ -44,6 +44,7 @@ public class SistemaUsuario extends Observable {
 
 	public void pedirListaUsuarios() {
 			try {
+			
 			Solicitud solicitud = new Solicitud(
 					new UsuarioDTO(this.getnickName()),
 					Util.SOLICITA_LISTA_USUARIO);
@@ -51,7 +52,7 @@ public class SistemaUsuario extends Observable {
 			oos.flush();
 			}
 			catch (IOException e) {
-		        e.printStackTrace();
+				estableceConexion();
 		    }
 	}
 
@@ -96,8 +97,16 @@ public class SistemaUsuario extends Observable {
 		}
 	}
 	public void estableceConexion() {
+		cerrarConexionAnterior();
 		obtienePuertoServidor();
-		comunicacionServidor();
+		if(this.puerto_servidor!=-1) {
+			comunicacionServidor();
+		}
+		else {
+			setChanged(); // importante
+			notifyObservers(Util.SIN_SERVER_DISPONIBLE);
+		}
+		
 	}
 	public void obtienePuertoServidor() {
 		try (Socket socket = new Socket(Util.IPLOCAL, Util.PUERTO_MONITOR)) {
@@ -109,9 +118,9 @@ public class SistemaUsuario extends Observable {
 			oosMonitor.flush();
 			try {
 				System.out.println(soli.getTipoSolicitud());
-				this.puerto_servidor = (int) oisMonitor.readObject();	
+				this.puerto_servidor=(int)oisMonitor.readObject();
+				System.out.println("Puerto servidor "+this.puerto_servidor);
 			} catch (ClassNotFoundException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			oosMonitor.close();
@@ -127,12 +136,11 @@ public class SistemaUsuario extends Observable {
 			oos.flush();
 			ois = new ObjectInputStream(socketServidor.getInputStream());
 			// Lanzar hilo receptor de mensajes del servidor
+			System.out.println("ois= "+ois);
 			Thread escuchaServidor = new Thread(() -> {
 				try {
 					while (true) {
-
 						Object recibido = ois.readObject();
-
 						if (recibido instanceof Mensaje) {
 							Mensaje mensaje = (Mensaje) recibido;
 							System.out.println("1");
@@ -171,13 +179,13 @@ public class SistemaUsuario extends Observable {
 												new Mensaje(m.getContenido(), m.getFechayhora(), emisor, receptor));
 									}
 									setChanged(); // importante
-									notifyObservers(recibido);
+									notifyObservers(respuesta);
 								} else {
 									if (recibido instanceof RespuestaListaUsuarios) {
 										RespuestaListaUsuarios respuesta=(RespuestaListaUsuarios) recibido;
 										System.out.println("3");
 										setChanged(); // importante
-										notifyObservers(recibido);
+										notifyObservers(respuesta);
 									}
 								}
 
@@ -186,7 +194,10 @@ public class SistemaUsuario extends Observable {
 						}
 					}
 				} catch (Exception e) {
-					e.printStackTrace(); // conexión caída
+					System.out.println("Se cayo la conexion ss");
+					this.puerto_servidor=-1;
+					//estableceConexion();
+					//e.printStackTrace(); // conexión caída
 				}
 			});
 			escuchaServidor.start();
@@ -195,18 +206,27 @@ public class SistemaUsuario extends Observable {
 			e.printStackTrace();
 		}
 	}
-	/*
-	public void medesconecto() {
-		try {
-			Solicitud soli = new Solicitud(new UsuarioDTO(this.getnickName(), this.getPuerto(), this.getIp()),
-					Util.CTEDESCONEXION);
-			oos.writeObject(soli);
-			oos.flush();
-			oos.close();
-		} catch (IOException e) {
-		}
+	private void cerrarConexionAnterior() {
+	    try {
+	        if (ois != null) 
+	        	ois.close();
+	    } catch (IOException e) {
+	       
+	    }
+	    try {
+	        if (oos != null ) 
+	        	oos.close();
+	    } catch (IOException e) {
+	        
+	    }
+	    try {
+	        if (socketServidor != null && !socketServidor.isClosed()) 
+	        	socketServidor.close();
+	    } catch (IOException e) {
+	       
+	    }
 	}
-	 */
+
 	private String getIp() {
 		return this.usuario.getIp();
 	}
@@ -232,28 +252,25 @@ public class SistemaUsuario extends Observable {
 				msg = new Mensaje(mensaje, LocalDateTime.now(), this.usuario, ureceptor);
 				oos.writeObject(msg);
 				oos.flush();
-			//	oos.close();
 				this.usuario.guardarMensaje(msg);
 				setChanged(); // importante
 				notifyObservers(msg);
+				
 			}
 
 		} catch (IOException e) {
-			ErrorEnvioMensajeException error = new ErrorEnvioMensajeException(
-					"Error de conexion: el Servidor se encuentra desconectado");
-			setChanged(); // importante
-			notifyObservers(error);
+			estableceConexion();
 		}
 	}
 
 	public void enviaSolicitudAServidor(String nickName, String tipo) {
 
 		try  {
-			Solicitud soli = new Solicitud(new UsuarioDTO(nickName), tipo);
-			System.out.println("HHH");
-			oos.writeObject(soli);
-			oos.flush();
-			//oos.close();
+			if(this.puerto_servidor!=-1) {
+				Solicitud soli = new Solicitud(new UsuarioDTO(nickName), tipo);
+				oos.writeObject(soli);
+				oos.flush();
+			}
 
 		} catch (IOException e) {
 			System.out.println("error");

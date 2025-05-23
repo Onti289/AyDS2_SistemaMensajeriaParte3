@@ -9,6 +9,7 @@ import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import java.awt.Component;
@@ -73,7 +74,9 @@ public class VentanaInicial extends JFrame implements IVista, ActionListener {
     public void dispose() {
         super.dispose();
     }
+    public void mostrarErrorServidoresCaidos(String error) {
 
+	}
     @Override
     public void actionPerformed(ActionEvent e) {
         // Lógica para manejar eventos si es necesario

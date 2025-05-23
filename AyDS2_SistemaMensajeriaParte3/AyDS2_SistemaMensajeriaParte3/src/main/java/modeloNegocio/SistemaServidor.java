@@ -3,6 +3,7 @@ package modeloNegocio;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -25,17 +26,21 @@ public class SistemaServidor {
 	private HashMap<String, ConexionUsuario> conexionesUsuarios = new HashMap<>();
 	private String ip;
 	private int puerto;
+	private boolean principal =false;
+	private ArrayList<ServidorDTO> listaServidores = new ArrayList<ServidorDTO>();
 	
 	private Thread heartbeatThread;
 	private volatile boolean heartbeatActivo = true;
 	private Socket socketMonitor;
-	private ObjectOutputStream oos;
-	private ObjectInputStream ois;
-	
+	private ObjectOutputStream oosMonitor;
+	private ObjectInputStream oisMonitor;
+	//private ObjectOutputStream oos;
+	//private ObjectInputStream ois;
 	private volatile boolean servidorActivo = true;
 	private ServerSocket serverSocket; // <-- lo haremos accesible
 	private Thread serverThread;
-
+	private HashMap<String, ConexionUsuario> conexiones = new HashMap<>();
+	private HashMap<String, ConexionServidor> conexionesServidores = new HashMap<>();
 	private SistemaServidor() {
 
 	}
@@ -46,7 +51,7 @@ public class SistemaServidor {
 		return servidor_instancia;
 	}
 	
-	private void enviaRespuestaUsuario(Solicitud usuario) {
+	private void enviaRespuestaUsuario(Solicitud usuario,ObjectOutputStream oos) {
 		try {
 			oos.writeObject(usuario);
 			oos.flush();
@@ -65,19 +70,18 @@ public class SistemaServidor {
 	                Socket clienteSocket = serverSocket.accept();
 	                Thread clienteHandler = new Thread(() -> {
 	                    try {
-	                        oos = new ObjectOutputStream(clienteSocket.getOutputStream());
+	                    	ObjectOutputStream oos = new ObjectOutputStream(clienteSocket.getOutputStream());
 	                        oos.flush(); // importante para evitar bloqueos
-	                        ois = new ObjectInputStream(clienteSocket.getInputStream());
+	                        ObjectInputStream ois = new ObjectInputStream(clienteSocket.getInputStream());
 	                        
 	                        while (true) {
-	                            Object recibido = ois.readObject();
-	                            
+	                            Object recibido = ois.readObject();  
 	                            if (recibido instanceof Solicitud) {
 	                                Solicitud solicitud = (Solicitud) recibido;
 	                           
 	                                switch (solicitud.getTipoSolicitud()) {
 	                                    case Util.SOLICITA_LISTA_USUARIO:
-	                                        retornaLista();
+	                                        retornaLista(oos);
 	                                        break;
 
 	                                    case Util.CTEREGISTRAR:
@@ -90,12 +94,13 @@ public class SistemaServidor {
 	                                        } else {
 	                                            solicitud.setTipoSolicitud(Util.CTEUSUARIOLOGUEADO);
 	                                        }
-	                                        enviaRespuestaUsuario(solicitud);
+	                                        enviaRespuestaUsuario(solicitud,oos);
 	                                        break;
 
 	                                    case Util.CTELOGIN:
 	                                        UsuarioDTO usuarioLogin = solicitud.getUsuarioDTO();
 	                                        int tipo = loginUsuario(usuarioLogin);
+	                                        System.out.println(tipo);
 	                                        if (tipo == 1) {
 	                                            solicitud.setTipoSolicitud(Util.CTELOGIN);
 	                                            String clave = usuarioLogin.getNombre();
@@ -106,7 +111,7 @@ public class SistemaServidor {
 	                                        } else {
 	                                            solicitud.setTipoSolicitud(Util.CTEUSUERINEXISTENTE);
 	                                        }
-	                                        enviaRespuestaUsuario(solicitud);
+	                                        enviaRespuestaUsuario(solicitud,oos);
 	                                        break;
 
 	                                    case Util.CTEDESCONEXION:
@@ -116,7 +121,7 @@ public class SistemaServidor {
 	                                    case Util.CTESOLICITARMENSAJES:
 	                                    	System.out.println("22"+ solicitud.getTipoSolicitud());
 	                                        UsuarioDTO usuario = solicitud.getUsuarioDTO();
-	                                        retornaListaMensajesPendientes(entregarMensajesPendientes(usuario.getNombre()));
+	                                        retornaListaMensajesPendientes(entregarMensajesPendientes(usuario.getNombre()),oos);
 	                                        break;
 
 	                                    default:
@@ -125,30 +130,71 @@ public class SistemaServidor {
 	                                }
 	                            } else if (recibido instanceof Mensaje) {
 	                                Mensaje mensaje = (Mensaje) recibido;
+	                     
 	                                enviarMensaje(mensaje);
+	                            }
+	                            else if(recibido instanceof Integer) { //para ver si es principal
+	                            	int respuesta=(int)recibido;
+	                    	        if(respuesta==1) { //es principal
+	                    	        	this.principal=true;
+	                    	        }
+	                    	        else { //llamas a resincronizacion
+	                    	        	resincronizar();
+	                    	        }
+	                            	
+	                    	        
 	                            }
 	                        }
 
 	                    } catch (Exception e) {
-	                        e.printStackTrace(); // o cerrar recursos si se desea
-	                    } finally {
-	                        try {
-	                            clienteSocket.close();
-	                        } catch (IOException e) {
-	                            e.printStackTrace();
-	                        }
-	                    }
+	                    	System.out.println("-l2");
+	                    	 try {
+
+								quitarUsuarioDesconectado(eliminaConexion(clienteSocket));
+								clienteSocket.close();
+							} catch (IOException e1) {
+								// TODO Auto-generated catch block
+								//e1.printStackTrace();
+							}
+	                      //  e.printStackTrace(); // o cerrar recursos si se desea
+	                    } 
 	                });
 	                clienteHandler.start();
 	            }
 	        } catch (IOException e) {
-	        	e.printStackTrace();
+	        	System.out.println("-555");
 	        	detenerServidor();
 	            System.err.println("Error al iniciar el servidor: " + e.getMessage());
 	        }
 	    });
 	    serverThread.start();
 	}
+
+	private void resincronizar() {
+		
+		
+	}
+
+	private String eliminaConexion(Socket socketDesconectado) {
+		    for (Map.Entry<String, ConexionUsuario> entry : conexionesUsuarios.entrySet()) {
+		        Socket socketGuardado = entry.getValue().getSocket();
+
+		        // Comparamos por instancia o por equals (ambos deberían funcionar bien con Socket)
+		        if (socketGuardado == socketDesconectado) {
+		            String nombre = entry.getKey();
+
+		            // Cerramos conexión de manera segura
+		            entry.getValue().cerrar();
+
+		            // Removemos del mapa
+		            conexionesUsuarios.remove(nombre);
+
+		            return nombre;
+		        }
+		    }
+		    return null; // No se encontró el socket
+		}
+
 
 	public boolean puertoDisponible(int puerto) {
 		try (ServerSocket socket = new ServerSocket(puerto)) {
@@ -183,13 +229,33 @@ public class SistemaServidor {
 	}
 
 	private void enviarMensaje(Mensaje mensaje) {
-		try {
-			oos.writeObject(mensaje);
-			oos.flush();
-		//	oos.close();
-		} catch (IOException e) {
-			this.mensajesPendientes.add(mensaje);
-		}
+			ObjectOutputStream oosReceptor;
+			System.out.println("DAtos de conexion");
+			ConexionUsuario conexionUsuario=null;
+			//aca recorre
+			for (Map.Entry<String, ConexionUsuario> entry : conexionesUsuarios.entrySet()) {
+			    String clave = entry.getKey();
+			    ConexionUsuario conexion = entry.getValue();
+			    if(clave.equalsIgnoreCase(mensaje.getReceptor().getNickName())) {
+					 conexionUsuario=conexion;
+			    }
+			}
+
+			if (conexionUsuario!=null) {
+				oosReceptor=conexionUsuario.getOos();
+				  try {	
+					  oosReceptor.writeObject(mensaje);
+					  oosReceptor.flush();
+			        } catch (IOException e) {
+			        	System.out.println("catch de enviar msj");
+			            mensajesPendientes.add(mensaje);
+			        }
+			}
+			else {
+				System.out.println("else de enviar mensaje");
+				 mensajesPendientes.add(mensaje);
+			}
+			
 		
 	}
 
@@ -206,7 +272,7 @@ public class SistemaServidor {
 	    }
 	}
 
-	private void retornaListaMensajesPendientes(List<MensajeDTO> msjPendientes) {
+	private void retornaListaMensajesPendientes(List<MensajeDTO> msjPendientes,ObjectOutputStream oos) {
 		try{
 			RespuestaListaMensajes listaRespuesta=new RespuestaListaMensajes(msjPendientes);
 			oos.writeObject(listaRespuesta);
@@ -216,9 +282,10 @@ public class SistemaServidor {
 			e.printStackTrace();
 		}
 	}
-	private void retornaLista() {
+	private void retornaLista(ObjectOutputStream oos) {
 		try {
-			oos.writeObject(obtenerListaUsuariosDTO());
+			RespuestaListaUsuarios lista= new RespuestaListaUsuarios(obtenerListaUsuariosDTO());
+			oos.writeObject(lista);
 			oos.flush();
 			//oos.close();
 		} catch (IOException e) {
@@ -284,17 +351,17 @@ public class SistemaServidor {
 		
 			try { 
 				this.socketMonitor=new Socket(Util.IPLOCAL, Util.PUERTO_MONITOR);
-			    this.oos = new ObjectOutputStream(this.socketMonitor.getOutputStream());
-			    this.oos.flush();
-			    this.ois = new ObjectInputStream(this.socketMonitor.getInputStream());
+			    this.oosMonitor = new ObjectOutputStream(this.socketMonitor.getOutputStream());
+			    this.oosMonitor.flush();
+			    this.oisMonitor = new ObjectInputStream(this.socketMonitor.getInputStream());
 			    this.puerto=puerto;
 			    this.ip=ip;
 			    ServidorDTO servidor = new ServidorDTO(puerto,ip);
 			    System.out.println("Servidor conectado al monitor: IP remota = " + this.socketMonitor.getInetAddress().getHostAddress()
 		                   + ", puerto remoto = " + this.socketMonitor.getPort()
 		                   + ", puerto local = " + this.socketMonitor.getLocalPort());
-			    oos.writeObject(servidor);
-				oos.flush();
+			    oosMonitor.writeObject(servidor);
+			    oosMonitor.flush();
 			    this.iniciaServidor(puerto);
 			    Heartbeat();
 			}
@@ -308,15 +375,15 @@ public class SistemaServidor {
 			while (heartbeatActivo) {
 				try { 
 					ServidorDTO servidor = new ServidorDTO(this.puerto, this.ip);
-					oos.writeObject(servidor);
-					oos.flush();
+					oosMonitor.writeObject(servidor);
+					oosMonitor.flush();
 				} catch (IOException e) {
 					e.printStackTrace();
 					System.err.println("Error en Heartbeat: " + e.getMessage());
 				}
 
 				try {
-					Thread.sleep(2000);
+					Thread.sleep(200);
 				} catch (InterruptedException e) {
 					Thread.currentThread().interrupt();
 					break;
@@ -328,8 +395,11 @@ public class SistemaServidor {
 	public void detenerHeartbeat() {
 	    heartbeatActivo = false;
 	    try {
-	        if (ois != null) ois.close();
-	        if (oos != null) oos.close();
+	    	System.out.println("ois "+oisMonitor==null);
+	    	System.out.println("oos "+oosMonitor==null);
+	    	System.out.println("Socket monitor "+socketMonitor==null);
+	        if (oisMonitor != null) oisMonitor.close();
+	        if (oosMonitor != null) oosMonitor.close();
 	        if (socketMonitor != null) socketMonitor.close();
 	    } catch (IOException e) {
 	        e.printStackTrace();
@@ -338,6 +408,7 @@ public class SistemaServidor {
 	
 	public void detenerServidor() {
 	    servidorActivo = false;
+	    System.out.println("tralalero");
 	    try {
 	        if (serverSocket != null && !serverSocket.isClosed()) {
 	            serverSocket.close(); // Esto hará que serverSocket.accept() lance una excepción y termine el bucle
@@ -345,10 +416,11 @@ public class SistemaServidor {
 	        if (serverThread != null && serverThread.isAlive()) {
 	            serverThread.join(); // Esperamos a que el hilo termine
 	        }
+	        detenerHeartbeat();
 	    } catch (IOException | InterruptedException e) {
 	        e.printStackTrace();
 	    }
-	    detenerHeartbeat();
+	    
 	}
 
 

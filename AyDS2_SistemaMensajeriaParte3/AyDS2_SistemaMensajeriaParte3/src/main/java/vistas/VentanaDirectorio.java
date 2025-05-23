@@ -104,6 +104,8 @@ public class VentanaDirectorio extends JFrame implements IVista, ActionListener 
 		JOptionPane.showMessageDialog(this, "El contacto que intentas agregar ya esta en tu agenda.",
 				"Contacto ya agendado", JOptionPane.ERROR_MESSAGE);
 	}
-	
+	public void mostrarErrorServidoresCaidos(String error) {
+		JOptionPane.showMessageDialog(this, error, "Error", JOptionPane.ERROR_MESSAGE);
+	}
 
 }

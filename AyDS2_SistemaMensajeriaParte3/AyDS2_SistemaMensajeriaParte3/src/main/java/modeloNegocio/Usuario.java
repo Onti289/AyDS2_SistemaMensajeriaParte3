@@ -85,7 +85,7 @@ public class Usuario implements Serializable {
 		if (obj == null || getClass() != obj.getClass())
 			return false;
 		Usuario other = (Usuario) obj;
-		return this.puerto == other.puerto && this.ip.equals(other.ip);
+		return this.nickName.equalsIgnoreCase(other.nickName);
 	}
 
 	@Override

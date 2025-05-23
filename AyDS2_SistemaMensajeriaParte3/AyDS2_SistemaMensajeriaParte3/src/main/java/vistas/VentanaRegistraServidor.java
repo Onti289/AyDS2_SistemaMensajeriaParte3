@@ -122,6 +122,9 @@ public class VentanaRegistraServidor extends JFrame implements IVista{
 	    );
 	    refrescaPantalla(); 
 	}
+	public void mostrarErrorServidoresCaidos(String error) {
+		
+	}
 	private void validarCampos() {
 	    String ip = campoIP.getText().trim();
 	    String puertoStr = campoPuerto.getText().trim();

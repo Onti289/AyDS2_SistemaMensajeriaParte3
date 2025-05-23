@@ -11,5 +11,6 @@ public interface IVista {
     void setActionListener(ActionListener controlador);
 
     void dispose();
-
+    
+    void mostrarErrorServidoresCaidos(String error);
 }

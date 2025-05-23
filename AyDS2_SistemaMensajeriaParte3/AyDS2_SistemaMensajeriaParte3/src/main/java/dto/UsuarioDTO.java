@@ -33,7 +33,7 @@ public class UsuarioDTO implements Serializable {
 
     @Override
     public String toString() {
-        return nombre + "(ip=" + ip + ",puerto=" + puerto + ")";
+        return nombre;
     }
 
     @Override
@@ -43,7 +43,7 @@ public class UsuarioDTO implements Serializable {
         if (obj == null || getClass() != obj.getClass())
             return false;
         UsuarioDTO other = (UsuarioDTO) obj;
-        return puerto == other.puerto && ip.equals(other.ip);
+        return nombre.equalsIgnoreCase(other.nombre);
     }
 
     @Override

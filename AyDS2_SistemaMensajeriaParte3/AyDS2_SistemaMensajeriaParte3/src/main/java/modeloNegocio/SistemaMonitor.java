@@ -19,6 +19,7 @@ public class SistemaMonitor extends Observable {
 	private static SistemaMonitor monitor_instancia = null;
 	private HashMap<String, ConexionServidor> conexiones = new HashMap<>();
 	private ServerSocket serverSocketMonitor; 
+	
 	private SistemaMonitor() {
 
 	}
@@ -99,40 +100,60 @@ public class SistemaMonitor extends Observable {
 									ServidorDTO servidorDTO = (ServidorDTO) recibido;
 									
 									int pos = this.posServidor(servidorDTO);
+									servidorDTO.setEnLinea(true);
 									System.out.println("posicion "+pos);
 									if (pos == -1) {// si esta vacio es el primer servidor
-										System.out.println("pppp");
-										servidorDTO.setEnLinea(true);
+										System.out.println("2");
 										servidorDTO.setPrincipal(true);
 										servidorDTO.setNro(1);
 										this.agregaServidor(servidorDTO);
 									} else {
-										if (pos < this.listaServidores.size()) { // servidor que llega se agrego al
-																					// menos una vez
-											if (!this.listaServidores.get(pos).isEnLinea()) {
-												if (!hayServidorEnlinea()) { // si no hay servidores en linea pasas a
-																				// ser el principal
-													this.listaServidores.get(pos).setPrincipal(true);
-												}
-												this.listaServidores.get(pos).setEnLinea(true);
-											} else {
-												this.listaServidores.get(pos).setPulso(true);
+										if (!hayServidorEnlinea()) { // si no hay servidores en linea pasas a ser el principal
+											System.out.println("3");
+											servidorDTO.setPrincipal(true);
+											if(pos<this.listaServidores.size()) {
+												this.listaServidores.get(pos).setPrincipal(true);	
 											}
-											servidorDTO.setEnLinea(true);
-											servidorDTO.setPrincipal(this.listaServidores.get(pos).isPrincipal());
+											else {
+												this.agregaServidor(servidorDTO);
+											}
+										}
+										if (pos < this.listaServidores.size()) { // servidor que llega se agrego al
+											System.out.println("4");									// menos una vez
+											if (!this.listaServidores.get(pos).isEnLinea()) {	//si no esta en linea
+												this.listaServidores.get(pos).setEnLinea(true);
+												servidorDTO.setEnLinea(true);
+												System.out.println("5");
+											} else {
+												servidorDTO.setPulso(true);
+												this.listaServidores.get(pos).setPulso(true);
+												if(this.listaServidores.get(pos).isPrincipal()) {
+													servidorDTO.setPrincipal(true);
+												}
+												System.out.println("6");
+											}
 											servidorDTO.setNro(pos + 1);
 										} else { // si llega aca es un nuevo servidor
 											servidorDTO.setEnLinea(true);
-											servidorDTO.setPrincipal(false);
 											servidorDTO.setNro(this.listaServidores.size() + 1);
 											this.agregaServidor(servidorDTO);
+											System.out.println("7");
 										}
 									}
-									if(pos==-1 || pos > this.listaServidores.size() || !this.listaServidores.get(pos).isEnLinea()){ //si esta vacio o es no esta en lista es un nuevo server por lo cual nueva conexion
+									if(pos==-1 || pos > this.listaServidores.size() || !this.listaServidores.get(pos).isEnLinea()){ //si esta vacio o no esta en linea es no esta en lista es un nuevo server por lo cual nueva conexion
 										String clave = generarClave(servidorDTO.getIp(), servidorDTO.getPuerto());
 										ConexionServidor conexion = new ConexionServidor(servidorDTO, oos, ois,finalServidorSocket);
 										conexiones.put(clave, conexion);	
 									}
+									System.out.println(servidorDTO.toString());
+									if(servidorDTO.isPrincipal()) {
+										oos.writeInt(1);
+									}
+									else {
+										oos.writeObject(buscaConexionServerPrincipal());
+									}
+									oos.flush();
+									
 									
 									setChanged(); // importante
 									notifyObservers(servidorDTO);
@@ -140,14 +161,10 @@ public class SistemaMonitor extends Observable {
 									if (recibido instanceof Solicitud) {
 										Solicitud solicitud = (Solicitud) recibido;
 										if (solicitud.getTipoSolicitud().equalsIgnoreCase(Util.SOLICITA_PUERTO_SERVIDOR)) {
-											int puerto = buscaPuertoServidorPrincipal();
-											if (puerto == -1) { // no encontro un servidor activo
-											
-											} else { // encontro un servidor activo	
-												oos.writeObject(puerto);
-												oos.flush();
-											}
+											oos.writeObject(buscaPuertoServidorPrincipal());
+											oos.flush();
 										}
+										finalServidorSocket.close();//como el cliente solo consulta con monitor no necesita mantener ese socket abierto
 									}
 								}
 
@@ -165,6 +182,14 @@ public class SistemaMonitor extends Observable {
 		});
 		serverThread.start();
 	}
+	private ConexionServidor buscaConexionServerPrincipal() {
+		String ipPrincipal=buscaIpServidorPrincipal();
+		int puertoPrincipal=buscaPuertoServidorPrincipal();
+		String clave=generarClave(ipPrincipal,puertoPrincipal);
+		
+		return conexiones.get(clave);
+	}
+
 	private String generarClave(String ip, int puerto) {
 	    return ip + ":" + puerto;
 	}
@@ -182,7 +207,19 @@ public class SistemaMonitor extends Observable {
 		}
 		return puerto;
 	}
-
+	private String buscaIpServidorPrincipal() {
+		String ip;
+		int i = 0;
+		while (i < this.listaServidores.size() && !this.listaServidores.get(i).isPrincipal()) {
+			i++;
+		}
+		if (i < this.listaServidores.size()) {
+			ip = this.listaServidores.get(i).getIp();
+		} else {
+			ip =null;
+		}
+		return ip;
+	}
 	private void controlaPulsos() {
 		// posible mejora que chequee 2 pulsos
 		Thread thread = new Thread(() -> {
@@ -191,15 +228,15 @@ public class SistemaMonitor extends Observable {
 					Iterator<ServidorDTO> it = listaServidores.iterator();
 					while (it.hasNext()) {
 						ServidorDTO s = it.next();
-						System.out.println("entraaaw");
+						
 						if (s.isEnLinea()) {
-							if (!s.isPulso()) {
-				
+							System.out.println("entraaaw");
+							if (!s.isPulso()) {				
 								int puerto = s.getPuerto();
 								String ip = s.getIp();
 								eliminaServidor(puerto, ip);
 								String clave = generarClave(ip, puerto);
-								ConexionServidor conexion = conexiones.remove(clave);
+								conexiones.remove(clave);
 								setChanged();
 								notifyObservers(s);
 							} else {
@@ -209,7 +246,7 @@ public class SistemaMonitor extends Observable {
 					}
 				}
 				try {
-					Thread.sleep(3000); // Verifica cada 3 segundos
+					Thread.sleep(300); // Verifica cada 3 segundos
 				} catch (InterruptedException e) {
 					Thread.currentThread().interrupt();
 					break;

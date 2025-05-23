@@ -17,6 +17,8 @@ public class ServidorDTO implements Serializable {
 		this.nro=nro;
 	}
 	public ServidorDTO(int puerto,String ip) {
+		this.enLinea=false;
+		this.principal=false;
 		this.puerto=puerto;
 		this.ip=ip;
 	}

@@ -217,8 +217,7 @@ public class VentanaPrincipal extends JFrame implements IVista, ActionListener, 
 	public void actionPerformed(ActionEvent e) {
 
 	}
-
-	public void mostrarErrorEnvioMensaje(String error) {
+	public void mostrarErrorServidoresCaidos(String error) {
 		JOptionPane.showMessageDialog(this, error, "Error", JOptionPane.ERROR_MESSAGE);
 	}
 

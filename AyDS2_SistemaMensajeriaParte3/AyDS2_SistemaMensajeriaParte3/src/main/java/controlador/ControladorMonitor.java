@@ -33,18 +33,21 @@ public class ControladorMonitor implements Observer {
 				String fechaHora = ahora.format(formato);
 				ventana.setEstadoServidor(servidor.getNro(),Util.CTE_EN_LINEA);
 				String mensaje="Servidor "+servidor.getNro()+" ("+fechaHora+")";
+				if(servidor.isPrincipal()) {
+					ventana.setTipoServidor(servidor.getNro(),Util.CTE_ACTIVO);
+				}
+				else {
+					ventana.setTipoServidor(servidor.getNro(),Util.CTE_REDUNDANTE);
+				}
 				ventana.setPuerto(servidor.getNro(),servidor.getPuerto());
 				ventana.agregarPulso(mensaje);
 			}
 			else {
 				ventana.setEstadoServidor(servidor.getNro(),Util.CTESERVERDESCONECTADO);
+				ventana.setTipoServidor(servidor.getNro(),"-");
+				
 			}
-			if(servidor.isPrincipal()) {
-				ventana.setTipoServidor(servidor.getNro(),Util.CTE_ACTIVO);
-			}
-			else {
-				ventana.setTipoServidor(servidor.getNro(),Util.CTE_REDUNDANTE);
-			}
+			
 		}
 		
 	}

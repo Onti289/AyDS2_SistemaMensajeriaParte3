@@ -32,5 +32,6 @@ public class Util {
 	public static final String CTE_ACTIVO = "Activo";
 	public static final String CTE_REDUNDANTE = "Redundante";
 	public static final String SOLICITA_PUERTO_SERVIDOR = "Solicita puerto servidor";
+	public static final String SIN_SERVER_DISPONIBLE = "No hay servidores disponibles";
 
 }

@@ -140,7 +140,7 @@ public class ControladorUsuario implements ActionListener, Observer {
 			}
 
 			break;
-		// llega aca cuando apreta boton iniciar sesion en VentanaRegistrarse
+		// llega aca cuando apreta boton iniciar sesion en VentanaLogin
 		case Util.CTELOGIN:
 
 			if (this.ventana instanceof VentanaLoginORegistrar) {
@@ -164,6 +164,7 @@ public class ControladorUsuario implements ActionListener, Observer {
 				contenidoMensaje = ((VentanaPrincipal) ventana).getTextFieldMensaje();
 				UsuarioDTO user = ((VentanaPrincipal) ventana).getContactoConversacionActual();
 				this.sistemaUsuario.enviarMensajeServidor(user, contenidoMensaje);
+				
 			}
 			break;
 		case Util.CTEINICIARCONVERSACION:
@@ -246,11 +247,7 @@ public class ControladorUsuario implements ActionListener, Observer {
 				}
 			}
 
-		} else if (arg instanceof IOException) {
-
-			String mensaje = ((IOException) arg).getMessage();
-			((VentanaPrincipal) ventana).mostrarErrorEnvioMensaje(mensaje);
-		} else {
+		}  else {
 			if (arg instanceof Solicitud) { // pudo registrar o loguear a usuario
 
 				Solicitud solicitud = (Solicitud) arg;
@@ -290,16 +287,21 @@ public class ControladorUsuario implements ActionListener, Observer {
 						List<UsuarioDTO> listaUsuarios = new ArrayList<>();
 						String nombre = this.getSistemaUsuario().getnickName();
 						for(Object obj : lista) {	
-						UsuarioDTO u = (UsuarioDTO) obj;
-						if (!u.getNombre().equalsIgnoreCase(nombre)) {
-							listaUsuarios.add(u);
+							UsuarioDTO u = (UsuarioDTO) obj;
+							if (!u.getNombre().equalsIgnoreCase(nombre)) {
+								listaUsuarios.add(u);
+							}
 						}
 						this.setVentana2(new VentanaDirectorio(this, listaUsuarios));
 					}
-				}
-					
-					
-
+					else {
+						if(arg instanceof String) {
+							String respuesta=(String)arg;
+							if(respuesta.equalsIgnoreCase(Util.SIN_SERVER_DISPONIBLE)) {
+								ventana.mostrarErrorServidoresCaidos(respuesta);
+							}
+						}
+					}
 					// Aca hacer que vista con algun metodo tome esa lista
 					// y lo muestre por pantalla
 				}
