@@ -77,6 +77,9 @@ public class SistemaServidor {
 	                        
 	                        while (true) {
 	                            Object recibido = ois.readObject();  
+	                            System.out.println("OIS DELA LADO DEL SERVER");
+	                            System.out.println(ois);
+	                            System.out.println(recibido);
 	                            if (recibido instanceof Solicitud) {
 	                                Solicitud solicitud = (Solicitud) recibido;
 	                           
@@ -133,14 +136,7 @@ public class SistemaServidor {
 	                                Mensaje mensaje = (Mensaje) recibido;
 	                     
 	                                enviarMensaje(mensaje);
-	                            }
-	                            else if(recibido instanceof Integer) { 
-	                    	        this.principal=true; //Si llega aca  es principal
-	                            }
-	                            else if(recibido instanceof ServidorDTO) {
-	                            	this.principal=false;
-	                            	resincronizar(((ServidorDTO)recibido));
-	                            }
+	                            }             
 	                            else if(recibido instanceof String) {
 	                            	if(((String)recibido).equalsIgnoreCase(Util.RESINCRONIZAR)) {
 	                            		this.retornaLista(oos,this.listaUsuarios,false); //lista de usuarios
@@ -216,6 +212,7 @@ public class SistemaServidor {
 						 }
 					 }
 					 else {
+						 System.out.println("11");
 						 for(UsuarioDTO usuarioDTO :listaDTO ) {
 							 this.listaUsuarios.add(new Usuario(usuarioDTO.getNombre()));
 						 }
@@ -223,6 +220,7 @@ public class SistemaServidor {
 				 }
 				 else {
 					 if(recibido instanceof RespuestaListaMensajes ){
+						 System.out.println("12");
 						 ArrayList<MensajeDTO> listaDTO =(ArrayList<MensajeDTO>) ((RespuestaListaMensajes)recibido).getLista();
 						 for(MensajeDTO msjDTO :listaDTO ) {
 							 Usuario emisor= new Usuario(msjDTO.getEmisor().getNombre());
@@ -233,9 +231,22 @@ public class SistemaServidor {
 				 }
 			} catch (ClassNotFoundException e) {
 				// TODO Auto-generated catch block
+				System.out.println("13");
 				e.printStackTrace();
 			}
-			sincronizacionServerSecundario(ois);
+			System.out.println("Usuarios Conectados:");
+			for(Usuario u :listaConectados ) {
+				System.out.println(u.getNickName());
+			 }
+			System.out.println("Usuarios :");
+			 for(Usuario u :listaUsuarios ) {
+				 System.out.println(u.getNickName());
+			 }
+			 System.out.println("MSJ pendientes:");
+			 for(Mensaje msj :mensajesPendientes ) {
+				System.out.println(msj.toString());
+			 }
+		//	sincronizacionServerSecundario(ois);
 	
 		} catch (IOException e) {
 			
@@ -448,6 +459,20 @@ public class SistemaServidor {
 		                   + ", puerto local = " + this.socketMonitor.getLocalPort());
 			    oosMonitor.writeObject(servidor);
 			    oosMonitor.flush();
+			     try {
+					Object recibido=oisMonitor.readObject();
+					if(recibido instanceof String) { 
+             	        this.principal=true; //Si llega aca  es principal
+                     }
+                     else if(recibido instanceof ServidorDTO) {
+                     	System.out.println("9");
+                     	this.principal=false;
+                     	resincronizar(((ServidorDTO)recibido));
+                     }
+				} catch (ClassNotFoundException e) {
+					System.out.println("Error aca");
+					e.printStackTrace();
+				}
 			    this.iniciaServidor(puerto);
 			    Heartbeat();
 			}

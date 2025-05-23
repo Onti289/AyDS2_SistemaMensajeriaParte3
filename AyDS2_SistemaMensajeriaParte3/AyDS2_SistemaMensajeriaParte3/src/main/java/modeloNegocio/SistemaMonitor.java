@@ -101,15 +101,19 @@ public class SistemaMonitor extends Observable {
 									
 									int pos = this.posServidor(servidorDTO);
 									servidorDTO.setEnLinea(true);
-									System.out.println("posicion "+pos);
+									
 									if (pos == -1) {// si esta vacio es el primer servidor
-										System.out.println("2");
+									
 										servidorDTO.setPrincipal(true);
 										servidorDTO.setNro(1);
 										this.agregaServidor(servidorDTO);
+										System.out.println("Primero");
+										oos.writeObject(Util.SOS_PRINCIPAL);
+										System.out.println("se envio");
+										oos.flush();
 									} else {
 										if (!hayServidorEnlinea()) { // si no hay servidores en linea pasas a ser el principal
-											System.out.println("3");
+											
 											servidorDTO.setPrincipal(true);
 											if(pos<this.listaServidores.size()) {
 												this.listaServidores.get(pos).setPrincipal(true);	
@@ -117,27 +121,32 @@ public class SistemaMonitor extends Observable {
 											else {
 												this.agregaServidor(servidorDTO);
 											}
+											oos.flush();
 										}
 										if (pos < this.listaServidores.size()) { // servidor que llega se agrego al
-											System.out.println("4");									// menos una vez
+																				// menos una vez
 											if (!this.listaServidores.get(pos).isEnLinea()) {	//si no esta en linea
 												this.listaServidores.get(pos).setEnLinea(true);
 												servidorDTO.setEnLinea(true);
-												System.out.println("5");
-											} else {
+												ServidorDTO s=buscaServerPrincipal();
+												oos.writeObject(s);
+												oos.flush();
+											} else { //entra si le manda pulso
 												servidorDTO.setPulso(true);
 												this.listaServidores.get(pos).setPulso(true);
 												if(this.listaServidores.get(pos).isPrincipal()) {
 													servidorDTO.setPrincipal(true);
 												}
-												System.out.println("6");
+												
 											}
 											servidorDTO.setNro(pos + 1);
 										} else { // si llega aca es un nuevo servidor
 											servidorDTO.setEnLinea(true);
 											servidorDTO.setNro(this.listaServidores.size() + 1);
 											this.agregaServidor(servidorDTO);
-											System.out.println("7");
+											ServidorDTO s=buscaServerPrincipal();
+											oos.writeObject(s);
+											oos.flush();
 										}
 									}
 									if(pos==-1 || pos > this.listaServidores.size() || !this.listaServidores.get(pos).isEnLinea()){ //si esta vacio o no esta en linea es no esta en lista es un nuevo server por lo cual nueva conexion
@@ -145,16 +154,6 @@ public class SistemaMonitor extends Observable {
 										ConexionServidor conexion = new ConexionServidor(servidorDTO, oos, ois,finalServidorSocket);
 										conexiones.put(clave, conexion);	
 									}
-									System.out.println(servidorDTO.toString());
-									if(servidorDTO.isPrincipal()) {
-										oos.writeInt(1);
-									}
-									else {
-										oos.writeObject(buscaServerPrincipal());
-									}
-									oos.flush();
-									
-									
 									setChanged(); // importante
 									notifyObservers(servidorDTO);
 								} else {
