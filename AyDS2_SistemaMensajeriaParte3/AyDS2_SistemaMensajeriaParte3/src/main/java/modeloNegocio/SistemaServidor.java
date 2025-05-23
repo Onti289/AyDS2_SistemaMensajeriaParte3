@@ -41,6 +41,7 @@ public class SistemaServidor {
 	private Thread serverThread;
 	private HashMap<String, ConexionUsuario> conexiones = new HashMap<>();
 	private HashMap<String, ConexionServidor> conexionesServidores = new HashMap<>();
+	
 	private SistemaServidor() {
 
 	}
@@ -81,7 +82,7 @@ public class SistemaServidor {
 	                           
 	                                switch (solicitud.getTipoSolicitud()) {
 	                                    case Util.SOLICITA_LISTA_USUARIO:
-	                                        retornaLista(oos);
+	                                        retornaLista(oos,this.listaUsuarios,false);
 	                                        break;
 
 	                                    case Util.CTEREGISTRAR:
@@ -133,16 +134,20 @@ public class SistemaServidor {
 	                     
 	                                enviarMensaje(mensaje);
 	                            }
-	                            else if(recibido instanceof Integer) { //para ver si es principal
-	                            	int respuesta=(int)recibido;
-	                    	        if(respuesta==1) { //es principal
-	                    	        	this.principal=true;
-	                    	        }
-	                    	        else { //llamas a resincronizacion
-	                    	        	resincronizar();
-	                    	        }
-	                            	
-	                    	        
+	                            else if(recibido instanceof Integer) { 
+	                    	        this.principal=true; //Si llega aca  es principal
+	                            }
+	                            else if(recibido instanceof ServidorDTO) {
+	                            	this.principal=false;
+	                            	resincronizar(((ServidorDTO)recibido));
+	                            }
+	                            else if(recibido instanceof String) {
+	                            	if(((String)recibido).equalsIgnoreCase(Util.RESINCRONIZAR)) {
+	                            		this.retornaLista(oos,this.listaUsuarios,false); //lista de usuarios
+	                            		this.retornaLista(oos,this.listaConectados,true); //lista de usuarios conectados
+	                            		this.retornaListaMensajesAServer(oos);
+	                            		
+	                            	}
 	                            }
 	                        }
 
@@ -169,9 +174,90 @@ public class SistemaServidor {
 	    });
 	    serverThread.start();
 	}
-
-	private void resincronizar() {
+	
+	private void retornaListaMensajesAServer(ObjectOutputStream oos) {
+		 
+		try {
+			oos.writeObject(mensajesPendientesDTO());
+			oos.flush();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		
+	}
+	private RespuestaListaMensajes mensajesPendientesDTO() {
+		
+		List<MensajeDTO> mensajesPendientesDTO = new ArrayList<MensajeDTO>();
+		for(Mensaje m :this.mensajesPendientes ) {
+			UsuarioDTO emisor= new UsuarioDTO(m.getEmisor().getNickName());
+			UsuarioDTO receptor=new UsuarioDTO(m.getReceptor().getNickName());
+			mensajesPendientesDTO.add(new MensajeDTO(m.getContenido(),m.getFechayhora(),emisor,receptor));
+		}
+		
+		return new RespuestaListaMensajes(mensajesPendientesDTO) ;
+	}
+	private void resincronizar(ServidorDTO servidor) {
+		try {
+			ServerSocket serverSocket = new ServerSocket(servidor.getPuerto());
+			Socket socketConServerPrincipal;
+			socketConServerPrincipal = serverSocket.accept();
+			ObjectOutputStream oos = new ObjectOutputStream(socketConServerPrincipal.getOutputStream());
+			ObjectInputStream ois = new ObjectInputStream(socketConServerPrincipal.getInputStream());
+			oos.writeObject(Util.RESINCRONIZAR);
+			oos.flush(); // importante para evitar bloqueos
+			try {
+				 Object recibido=ois.readObject();
+				 if(recibido instanceof RespuestaLista) {
+					 RespuestaLista respuesta=(RespuestaLista)recibido;
+					 ArrayList<UsuarioDTO> listaDTO =(ArrayList<UsuarioDTO>) respuesta.getLista();
+					 if(respuesta.isConectado()) {	 
+						 for(UsuarioDTO usuarioDTO :listaDTO ) {
+							 this.listaConectados.add(new Usuario(usuarioDTO.getNombre()));
+						 }
+					 }
+					 else {
+						 for(UsuarioDTO usuarioDTO :listaDTO ) {
+							 this.listaUsuarios.add(new Usuario(usuarioDTO.getNombre()));
+						 }
+					 }	
+				 }
+				 else {
+					 if(recibido instanceof RespuestaListaMensajes ){
+						 ArrayList<MensajeDTO> listaDTO =(ArrayList<MensajeDTO>) ((RespuestaListaMensajes)recibido).getLista();
+						 for(MensajeDTO msjDTO :listaDTO ) {
+							 Usuario emisor= new Usuario(msjDTO.getEmisor().getNombre());
+							 Usuario receptor= new Usuario(msjDTO.getReceptor().getNombre());
+							 this.mensajesPendientes.add(new Mensaje(msjDTO.getContenido(),msjDTO.getFechayhora(),emisor,receptor));
+						 }
+					 }
+				 }
+			} catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			sincronizacionServerSecundario(ois);
+	
+		} catch (IOException e) {
+			
+			e.printStackTrace();
+		}
+		
+
+	}
+	//Este metodo se establece luego de resincronizar y va recibiendo los msj/usuario una vez que este como secundario
+	private void sincronizacionServerSecundario(ObjectInputStream ois) {
+		while(!this.principal) {
+			try {
+				ois.readObject();
+			} catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+		}
 		
 	}
 
@@ -282,10 +368,10 @@ public class SistemaServidor {
 			e.printStackTrace();
 		}
 	}
-	private void retornaLista(ObjectOutputStream oos) {
+	private void retornaLista(ObjectOutputStream oos,ArrayList<Usuario> lista,boolean conectado) {
 		try {
-			RespuestaListaUsuarios lista= new RespuestaListaUsuarios(obtenerListaUsuariosDTO());
-			oos.writeObject(lista);
+			RespuestaLista listarespuesta= new RespuestaLista(obtenerListaUsuariosDTO(lista),conectado);
+			oos.writeObject(listarespuesta);
 			oos.flush();
 			//oos.close();
 		} catch (IOException e) {
@@ -293,9 +379,9 @@ public class SistemaServidor {
 		}
 	}
 
-	private List<UsuarioDTO> obtenerListaUsuariosDTO() {
+	private List<UsuarioDTO> obtenerListaUsuariosDTO(ArrayList<Usuario> lista) {
 		List<UsuarioDTO> listaDTO = new ArrayList<>();
-		for (Usuario u : this.listaUsuarios) {
+		for (Usuario u : lista) {
 			listaDTO.add(new UsuarioDTO(u.getNickName()));
 		}
 		return listaDTO;

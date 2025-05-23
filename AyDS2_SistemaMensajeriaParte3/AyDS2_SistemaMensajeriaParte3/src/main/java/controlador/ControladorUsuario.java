@@ -12,7 +12,7 @@ import java.util.PriorityQueue;
 
 import dto.MensajeDTO;
 import dto.RespuestaListaMensajes;
-import dto.RespuestaListaUsuarios;
+import dto.RespuestaLista;
 import dto.UsuarioDTO;
 import modeloNegocio.*;
 import util.Util;
@@ -281,8 +281,8 @@ public class ControladorUsuario implements ActionListener, Observer {
 					}
 				}
 				else {
-					if (arg instanceof RespuestaListaUsuarios) {
-						RespuestaListaUsuarios respuesta=(RespuestaListaUsuarios) arg;
+					if (arg instanceof RespuestaLista) {
+						RespuestaLista respuesta=(RespuestaLista) arg;
 						List<UsuarioDTO> lista = respuesta.getLista();
 						List<UsuarioDTO> listaUsuarios = new ArrayList<>();
 						String nombre = this.getSistemaUsuario().getnickName();

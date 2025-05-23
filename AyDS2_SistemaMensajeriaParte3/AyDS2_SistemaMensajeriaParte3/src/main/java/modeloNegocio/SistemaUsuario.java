@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import dto.ContactoDTO;
 import dto.RespuestaListaMensajes;
-import dto.RespuestaListaUsuarios;
+import dto.RespuestaLista;
 import dto.MensajeDTO;
 import dto.UsuarioDTO;
 import excepciones.ErrorEnvioMensajeException;
@@ -181,8 +181,8 @@ public class SistemaUsuario extends Observable {
 									setChanged(); // importante
 									notifyObservers(respuesta);
 								} else {
-									if (recibido instanceof RespuestaListaUsuarios) {
-										RespuestaListaUsuarios respuesta=(RespuestaListaUsuarios) recibido;
+									if (recibido instanceof RespuestaLista) {
+										RespuestaLista respuesta=(RespuestaLista) recibido;
 										System.out.println("3");
 										setChanged(); // importante
 										notifyObservers(respuesta);

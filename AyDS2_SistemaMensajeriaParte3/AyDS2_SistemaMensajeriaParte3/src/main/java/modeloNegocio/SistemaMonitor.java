@@ -150,7 +150,7 @@ public class SistemaMonitor extends Observable {
 										oos.writeInt(1);
 									}
 									else {
-										oos.writeObject(buscaConexionServerPrincipal());
+										oos.writeObject(buscaServerPrincipal());
 									}
 									oos.flush();
 									
@@ -182,12 +182,12 @@ public class SistemaMonitor extends Observable {
 		});
 		serverThread.start();
 	}
-	private ConexionServidor buscaConexionServerPrincipal() {
+	private ServidorDTO buscaServerPrincipal() {
 		String ipPrincipal=buscaIpServidorPrincipal();
 		int puertoPrincipal=buscaPuertoServidorPrincipal();
-		String clave=generarClave(ipPrincipal,puertoPrincipal);
 		
-		return conexiones.get(clave);
+		
+		return new ServidorDTO(puertoPrincipal,ipPrincipal);
 	}
 
 	private String generarClave(String ip, int puerto) {
